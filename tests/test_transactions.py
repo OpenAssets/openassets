@@ -66,7 +66,7 @@ class TransactionBuilderTests(unittest.TestCase):
             openassets.transactions.InsufficientFundsError,
             self.target.issue, outputs, 1000, b'metadata', b'source', b'target', 5)
 
-    def test_transfer_bitcoin(self):
+    def test_transfer_bitcoin_with_change(self):
         outputs = self.generate_outputs([
             (150, b'source', b'a1', 50),
             (150, b'source', None, 0),
@@ -85,7 +85,36 @@ class TransactionBuilderTests(unittest.TestCase):
         # Bitcoins sent
         self.assert_output(result.vout[1], 200, b'target')
 
-    def test_transfer_assets(self):
+    def test_transfer_bitcoin_no_change(self):
+        outputs = self.generate_outputs([
+            (150, b'source', b'a1', 50),
+            (60, b'source', None, 0),
+            (150, b'other', None, 0),
+            (150, b'source', None, 0)
+        ])
+
+        result = self.target.transfer_bitcoin(outputs, b'source', b'target', 200, 10)
+
+        self.assertEqual(2, len(result.vin))
+        self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assertEqual(1, len(result.vout))
+        # Bitcoins sent
+        self.assert_output(result.vout[0], 200, b'target')
+
+    def test_transfer_bitcoin_insufficient_funds(self):
+        outputs = self.generate_outputs([
+            (150, b'source', b'a1', 50),
+            (60, b'source', None, 0),
+            (150, b'other', None, 0),
+            (150, b'source', None, 0)
+        ])
+
+        self.assertRaises(
+            openassets.transactions.InsufficientFundsError,
+            self.target.transfer_bitcoin, outputs, b'source', b'target', 201, 10)
+
+    def test_transfer_assets_with_change(self):
         outputs = self.generate_outputs([
             (10, b'source', b'a1', 50),
             (80, b'source', None, 0),
@@ -107,6 +136,39 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_output(result.vout[2], 10, b'source')
         # Bitcoin change
         self.assert_output(result.vout[3], 40, b'source')
+
+    def test_transfer_assets_no_change(self):
+        outputs = self.generate_outputs([
+            (10, b'source', b'a1', 50),
+            (80, b'source', None, 0),
+            (10, b'other', None, 0),
+            (10, b'source', b'a1', 70)
+        ])
+
+        result = self.target.transfer_assets(outputs, b'source', b'target', b'a1', 120, 40)
+
+        self.assertEqual(3, len(result.vin))
+        self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
+        self.assertEqual(3, len(result.vout))
+        self.assert_marker(result.vout[0], [120], b'')
+        # Asset sent
+        self.assert_output(result.vout[1], 10, b'target')
+        # Bitcoin change
+        self.assert_output(result.vout[2], 50, b'source')
+
+    def test_transfer_assets_insufficient_funds(self):
+        outputs = self.generate_outputs([
+            (10, b'source', b'a1', 50),
+            (80, b'source', None, 0),
+            (10, b'other', None, 0),
+            (10, b'source', b'a1', 70)
+        ])
+
+        self.assertRaises(
+            openassets.transactions.InsufficientFundsError,
+            self.target.transfer_assets, outputs, b'source', b'target', b'a1', 121, 40)
 
     def test_btc_asset_swap(self):
         outputs = self.generate_outputs([
