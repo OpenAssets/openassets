@@ -139,6 +139,23 @@ class TransactionBuilder(object):
         """
         return self.transfer(unspent_outputs, [], from_script, to_script, amount_btc, fees)
 
+    def transfer_assets(self, unspent_outputs, from_script, to_script, asset_address, asset_quantity, fees):
+        """
+        Creates a transaction for sending an asset.
+        :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
+        :param bytes from_script: The script from which to send assets.
+        :param bytes to_script: The script receiving the payment.
+        :param bytes asset_address: The address of the asset being sent.
+        :param int asset_quantity: The number of units being sent.
+        :param int fees: The fees to include in the transaction.
+        :return:
+        :rtype: CTransaction
+        """
+        return self.transfer(
+            unspent_outputs,
+            [(from_script, to_script, asset_address, asset_quantity)],
+            from_script, to_script, 0, fees)
+
     def _collect_uncolored_outputs(self, unspent_outputs, from_script, amount):
         """
         Returns a list of uncolored outputs for the specified amount.
@@ -177,7 +194,7 @@ class TransactionBuilder(object):
         for output in unspent_outputs:
             if output.output.asset_address == asset_address and bytes(output.output.scriptPubKey) == from_script:
                 result.append(output)
-                total_amount += output.output.asset_address
+                total_amount += output.output.asset_quantity
 
             if total_amount >= amount:
                 return result, total_amount

@@ -83,6 +83,26 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_output(result.vout[0], 90, b'source')
         self.assert_output(result.vout[1], 200, b'target')
 
+    def test_transfer_assets(self):
+        outputs = self.generate_outputs([
+            (10, b'source', b'a1', 50),
+            (80, b'source', None, 0),
+            (10, b'other', None, 0),
+            (10, b'source', b'a1', 100)
+        ])
+
+        result = self.target.transfer_assets(outputs, b'source', b'target',  b'a1', 120, 40)
+
+        self.assertEquals(3, len(result.vin))
+        self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
+        self.assertEquals(4, len(result.vout))
+        self.assert_marker(result.vout[0], [120, 30], b'')
+        self.assert_output(result.vout[1], 10, b'target')
+        self.assert_output(result.vout[2], 10, b'source')
+        self.assert_output(result.vout[3], 40, b'source')
+
     # Test helpers
 
     def generate_outputs(self, definitions):
