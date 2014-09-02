@@ -23,10 +23,8 @@
 # SOFTWARE.
 
 """
-openassets.protocol
-
 Provides the infrastructure for calculating the asset address and quantity of Bitcoin outputs,
-following the open assets protocol.
+according to the Open Assets Protocol.
 """
 
 import bitcoin.core

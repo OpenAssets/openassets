@@ -23,9 +23,7 @@
 # SOFTWARE.
 
 """
-openassets.transactions
-
-Provides utilities for constructing open assets transactions.
+Provides functions for constructing unsigned Open Assets transactions.
 """
 
 import bitcoin.core

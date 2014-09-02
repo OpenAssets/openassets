@@ -1,7 +1,7 @@
 Open Assets Reference Implementation
 ====================================
 
-This Python package is the reference implementation of the colored coins `Open Assets Protocol <https://github.com/OpenAssets/open-assets-protocol/blob/master/specification.mediawiki>`_.
+The ``openassets`` Python package is the reference implementation of the colored coins `Open Assets Protocol <https://github.com/OpenAssets/open-assets-protocol/blob/master/specification.mediawiki>`_.
 
 Open Assets is a protocol for issuing and transferring custom digital tokens in a secure way on the Bitcoin blockchain (or any compatible blockchain).
 
@@ -69,7 +69,7 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
 ``transactions`` submodule
 --------------------------
 
-The ``transactions`` submodule contains functions that can be used to build Open Assets transactions for various purposes.
+The ``transactions`` submodule contains functions that can be used to build unsigned Open Assets transactions for various purposes.
 
 Usage
 ^^^^^
