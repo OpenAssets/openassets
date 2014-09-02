@@ -245,7 +245,7 @@ class TransactionBuilder(object):
             if total_amount >= amount:
                 return result, total_amount
 
-        raise InsufficientFundsError
+        raise InsufficientAssetQuantityError
 
     def _get_uncolored_output(self, script, value):
         """
@@ -256,6 +256,9 @@ class TransactionBuilder(object):
         :return: The new script object.
         :rtype: TransactionOutput
         """
+        if value < self._dust_amount:
+            raise DustOutputError
+
         return bitcoin.core.CTxOut(value, bitcoin.core.CScript(script))
 
     def _get_colored_output(self, script):
@@ -319,5 +322,17 @@ class SpendableOutput(object):
         return 'SpendableOutput(out_point=%r, output=%r)' % (self.out_point, self.output)
 
 
-class InsufficientFundsError(Exception):
+class TransactionBuilderError(Exception):
+    pass
+
+
+class InsufficientFundsError(TransactionBuilderError):
+    pass
+
+
+class InsufficientAssetQuantityError(TransactionBuilderError):
+    pass
+
+
+class DustOutputError(TransactionBuilderError):
     pass
