@@ -66,7 +66,7 @@ class ColoringEngine(object):
         transaction = self._transaction_provider(transaction_hash)
 
         if transaction is None:
-            raise ValueError("Transaction {0} could not be retrieved".format(bitcoin.core.b2lx(transaction_hash)))
+            raise ValueError('Transaction {0} could not be retrieved'.format(bitcoin.core.b2lx(transaction_hash)))
 
         colored_outputs = self.color_transaction(transaction)
 
@@ -258,7 +258,7 @@ class TransactionOutput(bitcoin.core.CTxOut):
         return self._output_type
 
     def __repr__(self):
-        return "TransactionOutput(nValue=%r, scriptPubKey=%r, asset_address=%r, asset_quantity=%r, output_type=%r)" % \
+        return 'TransactionOutput(nValue=%r, scriptPubKey=%r, asset_address=%r, asset_quantity=%r, output_type=%r)' % \
             (self.nValue, self.scriptPubKey, self.asset_address, self.asset_quantity, self.output_type)
 
 
@@ -445,7 +445,7 @@ class MarkerOutput(object):
         while True:
             character = data.read(1)
             if len(character) == 0:
-                raise bitcoin.core.SerializationTruncationError("Invalid LEB128 integer")
+                raise bitcoin.core.SerializationTruncationError('Invalid LEB128 integer')
 
             b = ord(character)
             result |= (b & 0x7f) << shift
@@ -477,4 +477,4 @@ class MarkerOutput(object):
         return bytes(result)
 
     def __repr__(self):
-        return "MarkerOutputPayload(asset_quantities=%r, metadata=%r)" % (self.asset_quantities, self.metadata)
+        return 'MarkerOutputPayload(asset_quantities=%r, metadata=%r)' % (self.asset_quantities, self.metadata)

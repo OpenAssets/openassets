@@ -44,14 +44,14 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', None, 0)
         ])
 
-        result = self.target.issue(outputs, 1000, b'metadata', b'source', b'target', 5)
+        result = self.target.issue(outputs, b'source', b'target', 1000, b'metadata', 5)
 
         self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
         self.assertEqual(3, len(result.vout))
-        self.assert_marker(result.vout[0], [1000], b'metadata')
-        self.assert_output(result.vout[1], 10, b'target')
+        self.assert_output(result.vout[0], 10, b'target')
+        self.assert_marker(result.vout[1], [1000], b'metadata')
         self.assert_output(result.vout[2], 10, b'source')
 
     def test_issue_asset_insufficient_funds(self):

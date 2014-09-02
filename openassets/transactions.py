@@ -43,15 +43,15 @@ class TransactionBuilder(object):
         """
         self._dust_amount = dust_amount
 
-    def issue(self, unspent_outputs, asset_quantity, metadata, from_script, to_script, fees):
+    def issue(self, unspent_outputs, from_script, to_script, asset_quantity, metadata, fees):
         """
         Creates a transaction for issuing an asset.
 
         :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
-        :param int asset_quantity: The quantity to be issued.
-        :param bytes metadata: The metadata to be embedded in the transaction.
         :param bytes from_script: The origin script.
         :param bytes to_script: The destination script.
+        :param int asset_quantity: The quantity to be issued.
+        :param bytes metadata: The metadata to be embedded in the transaction.
         :param int fees: The fees to include in the transaction.
         :return: An unsigned transaction for issuing an asset.
         :rtype: CTransaction
@@ -62,8 +62,8 @@ class TransactionBuilder(object):
         return bitcoin.core.CTransaction(
             vin=[bitcoin.core.CTxIn(item.out_point, item.output.scriptPubKey) for item in inputs],
             vout=[
-                self._get_marker_output([asset_quantity], metadata),
                 self._get_colored_output(to_script),
+                self._get_marker_output([asset_quantity], metadata),
                 self._get_uncolored_output(from_script, total_amount - self._dust_amount - fees)
             ]
         )
@@ -317,7 +317,7 @@ class SpendableOutput(object):
         return self._output
 
     def __repr__(self):
-        return "SpendableOutput(out_point=%r, output=%r)" % (self.out_point, self.output)
+        return 'SpendableOutput(out_point=%r, output=%r)' % (self.out_point, self.output)
 
 
 class InsufficientFundsError(Exception):
