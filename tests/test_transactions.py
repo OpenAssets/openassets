@@ -46,10 +46,10 @@ class TransactionBuilderTests(unittest.TestCase):
 
         result = self.target.issue(outputs, 1000, b'metadata', b'source', b'target', 5)
 
-        self.assertEquals(2, len(result.vin))
+        self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
-        self.assertEquals(3, len(result.vout))
+        self.assertEqual(3, len(result.vout))
         self.assert_marker(result.vout[0], [1000], b'metadata')
         self.assert_output(result.vout[1], 10, b'target')
         self.assert_output(result.vout[2], 10, b'source')
@@ -76,11 +76,13 @@ class TransactionBuilderTests(unittest.TestCase):
 
         result = self.target.transfer_bitcoin(outputs, b'source', b'target', 200, 10)
 
-        self.assertEquals(2, len(result.vin))
+        self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
-        self.assertEquals(2, len(result.vout))
+        self.assertEqual(2, len(result.vout))
+        # Bitcoin change
         self.assert_output(result.vout[0], 90, b'source')
+        # Bitcoins sent
         self.assert_output(result.vout[1], 200, b'target')
 
     def test_transfer_assets(self):
@@ -91,17 +93,77 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', b'a1', 100)
         ])
 
-        result = self.target.transfer_assets(outputs, b'source', b'target',  b'a1', 120, 40)
+        result = self.target.transfer_assets(outputs, b'source', b'target', b'a1', 120, 40)
 
-        self.assertEquals(3, len(result.vin))
+        self.assertEqual(3, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
-        self.assertEquals(4, len(result.vout))
+        self.assertEqual(4, len(result.vout))
         self.assert_marker(result.vout[0], [120, 30], b'')
+        # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
+        # Asset change
         self.assert_output(result.vout[2], 10, b'source')
+        # Bitcoin change
         self.assert_output(result.vout[3], 40, b'source')
+
+    def test_btc_asset_swap(self):
+        outputs = self.generate_outputs([
+            (10, b'other', b'a1', 50),
+            (90, b'source_btc', None, 0),
+            (10, b'source_asset', b'a1', 50),
+            (10, b'source_asset', b'a1', 100),
+            (100, b'source_btc', None, 0)
+        ])
+
+        result = self.target.btc_asset_swap(outputs, b'source_asset', b'source_btc', b'a1', 120, 160, 10)
+
+        self.assertEqual(4, len(result.vin))
+        self.assert_input(result.vin[0], b'2' * 32, 2, b'source_asset')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source_asset')
+        self.assert_input(result.vin[2], b'1' * 32, 1, b'source_btc')
+        self.assert_input(result.vin[3], b'4' * 32, 4, b'source_btc')
+        self.assertEqual(5, len(result.vout))
+        self.assert_marker(result.vout[0], [120, 30], b'')
+        # Asset sent
+        self.assert_output(result.vout[1], 10, b'source_btc')
+        # Asset change
+        self.assert_output(result.vout[2], 10, b'source_asset')
+        # Bitcoin change
+        self.assert_output(result.vout[3], 20, b'source_btc')
+        # Bitcoins sent
+        self.assert_output(result.vout[4], 160, b'source_asset')
+
+    def test_asset_asset_swap(self):
+        outputs = self.generate_outputs([
+            (10, b'other', b'a1', 50),
+            (10, b'source_1', b'a1', 100),
+            (10, b'source_2', b'a2', 600),
+            (10, b'source_1', b'a1', 80),
+            (100, b'source_2', None, 0),
+            (80, b'source_1', None, 0)
+        ])
+
+        result = self.target.asset_asset_swap(outputs, b'source_1', b'source_2', b'a1', 120, b'a2', 260, 20)
+
+        self.assertEqual(4, len(result.vin))
+        self.assert_input(result.vin[0], b'1' * 32, 1, b'source_1')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source_1')
+        self.assert_input(result.vin[2], b'2' * 32, 2, b'source_2')
+        self.assert_input(result.vin[3], b'5' * 32, 5, b'source_1')
+        self.assertEqual(6, len(result.vout))
+        self.assert_marker(result.vout[0], [120, 60, 260, 340], b'')
+        # Asset 1 sent
+        self.assert_output(result.vout[1], 10, b'source_2')
+        # Asset 1 change
+        self.assert_output(result.vout[2], 10, b'source_1')
+        # Asset 2 sent
+        self.assert_output(result.vout[3], 10, b'source_1')
+        # Asset 2 sent
+        self.assert_output(result.vout[4], 10, b'source_2')
+        # Bitcoin change
+        self.assert_output(result.vout[5], 50, b'source_1')
 
     # Test helpers
 
@@ -120,21 +182,21 @@ class TransactionBuilderTests(unittest.TestCase):
         return result
 
     def assert_input(self, input, transaction_hash, output_index, script):
-        self.assertEquals(transaction_hash, input.prevout.hash)
-        self.assertEquals(output_index, input.prevout.n)
-        self.assertEquals(script, bytes(input.scriptSig))
+        self.assertEqual(transaction_hash, input.prevout.hash)
+        self.assertEqual(output_index, input.prevout.n)
+        self.assertEqual(script, bytes(input.scriptSig))
 
     def assert_output(self, output, nValue, scriptPubKey):
-        self.assertEquals(nValue, output.nValue)
-        self.assertEquals(scriptPubKey, bytes(output.scriptPubKey))
+        self.assertEqual(nValue, output.nValue)
+        self.assertEqual(scriptPubKey, bytes(output.scriptPubKey))
 
     def assert_marker(self, output, asset_quantities, metadata):
         payload = openassets.protocol.MarkerOutput.parse_script(output.scriptPubKey)
         marker_output = openassets.protocol.MarkerOutput.deserialize_payload(payload)
 
-        self.assertEquals(0, output.nValue)
-        self.assertEquals(asset_quantities, marker_output.asset_quantities)
-        self.assertEquals(metadata, marker_output.metadata)
+        self.assertEqual(0, output.nValue)
+        self.assertEqual(asset_quantities, marker_output.asset_quantities)
+        self.assertEqual(metadata, marker_output.metadata)
 
 
 class SpendableOutputTests(unittest.TestCase):
@@ -143,5 +205,5 @@ class SpendableOutputTests(unittest.TestCase):
             bitcoin.core.COutPoint('\x01' * 32),
             openassets.protocol.TransactionOutput(100))
 
-        self.assertEquals('\x01' * 32, target.out_point.hash)
-        self.assertEquals(100, target.output.nValue)
+        self.assertEqual('\x01' * 32, target.out_point.hash)
+        self.assertEqual(100, target.output.nValue)

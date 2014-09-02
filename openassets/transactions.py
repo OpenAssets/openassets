@@ -53,7 +53,7 @@ class TransactionBuilder(object):
         :param bytes from_script: The origin script.
         :param bytes to_script: The destination script.
         :param int fees: The fees to include in the transaction.
-        :return: A transaction for issuing an asset.
+        :return: An unsigned transaction for issuing an asset.
         :rtype: CTransaction
         """
         inputs, total_amount = self._collect_uncolored_outputs(
@@ -70,7 +70,7 @@ class TransactionBuilder(object):
 
     def transfer(self, unspent_outputs, transfer_spec, from_btc, to_btc, amount_btc, fees):
         """
-        Creates a transaction for sending assets and Bitcoins.
+        Creates a transaction for sending assets and bitcoins.
 
         :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
         :param list[(bytes, bytes, bytes, int)] transfer_spec: A list of tuples. In each tuple:
@@ -78,11 +78,11 @@ class TransactionBuilder(object):
             - The second element is the receiving script.
             - The third element is the asset address of the asset being sent.
             - The fourth element is the number of asset units being sent.
-        :param bytes from_btc: The script from which to pay Bitcoins.
-        :param bytes to_btc: The script receiving the Bitcoin payment.
+        :param bytes from_btc: The script from which to pay bitcoins.
+        :param bytes to_btc: The script receiving the bitcoin payment.
         :param int amount_btc: The amount of satoshis to send.
         :param int fees: The fees to include in the transaction.
-        :return: A transaction for sending assets and Bitcoins.
+        :return: An unsigned transaction for sending assets and bitcoins.
         :rtype: CTransaction
         """
         inputs = []
@@ -104,14 +104,14 @@ class TransactionBuilder(object):
         btc_excess = sum([input.output.nValue for input in inputs]) - sum([output.nValue for output in outputs])
 
         if btc_excess < amount_btc + fees:
-            # Not enough Bitcoin inputs
+            # Not enough bitcoin inputs
             uncolored_outputs, total_amount = self._collect_uncolored_outputs(
                 unspent_outputs, from_btc, amount_btc + fees - btc_excess)
             inputs.extend(uncolored_outputs)
             btc_excess += total_amount
 
         if btc_excess > amount_btc + fees:
-            # Too much Bitcoin in input, send it back as change
+            # Too much bitcoin in input, send it back as change
             outputs.append(self._get_uncolored_output(from_btc, btc_excess - amount_btc - fees))
 
         if amount_btc > 0:
@@ -127,14 +127,14 @@ class TransactionBuilder(object):
 
     def transfer_bitcoin(self, unspent_outputs, from_script, to_script, amount_btc, fees):
         """
-        Creates a transaction for sending Bitcoins.
+        Creates a transaction for sending bitcoins.
 
         :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
-        :param bytes from_script: The script from which to pay Bitcoins.
-        :param bytes to_script: The script receiving the Bitcoin payment.
+        :param bytes from_script: The script from which to pay bitcoins.
+        :param bytes to_script: The script receiving the bitcoin payment.
         :param int amount_btc: The amount of satoshis to send.
         :param int fees: The fees to include in the transaction.
-        :return: A transaction for sending Bitcoins.
+        :return: The resulting unsigned transaction.
         :rtype: CTransaction
         """
         return self.transfer(unspent_outputs, [], from_script, to_script, amount_btc, fees)
@@ -142,19 +142,66 @@ class TransactionBuilder(object):
     def transfer_assets(self, unspent_outputs, from_script, to_script, asset_address, asset_quantity, fees):
         """
         Creates a transaction for sending an asset.
+
         :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
         :param bytes from_script: The script from which to send assets.
         :param bytes to_script: The script receiving the payment.
         :param bytes asset_address: The address of the asset being sent.
         :param int asset_quantity: The number of units being sent.
         :param int fees: The fees to include in the transaction.
-        :return:
+        :return: The resulting unsigned transaction.
         :rtype: CTransaction
         """
         return self.transfer(
             unspent_outputs,
             [(from_script, to_script, asset_address, asset_quantity)],
             from_script, to_script, 0, fees)
+
+    def btc_asset_swap(
+            self, unspent_outputs, asset_from_script, btc_from_script, asset_address, asset_quantity, amount_btc, fees):
+        """
+        Creates a transaction for swapping assets for bitcoins.
+
+        :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
+        :param bytes asset_from_script: The script from which to send assets, and receiving the bitcoins.
+        :param bytes btc_from_script: The script from which to send bitcoins, and receiving the assets.
+        :param bytes asset_address: The address of the asset being sent.
+        :param int asset_quantity: The number of units being sent.
+        :param int amount_btc: The amount of satoshis to send.
+        :param int fees: The fees to include in the transaction.
+        :return: The resulting unsigned transaction.
+        :rtype: CTransaction
+        """
+        return self.transfer(
+            unspent_outputs,
+            [(asset_from_script, btc_from_script, asset_address, asset_quantity)],
+            btc_from_script, asset_from_script, amount_btc, fees)
+
+    def asset_asset_swap(
+            self, unspent_outputs, asset1_from_script, asset2_from_script, asset1_address, asset1_quantity,
+            asset2_address, asset2_quantity, fees):
+        """
+        Creates a transaction for swapping an asset for another asset.
+
+        :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
+        :param bytes asset1_from_script: The script from which to send the first asset, and receiving the second asset.
+            It also pays for fees and/or receives change if any.
+        :param bytes asset2_from_script: The script from which to send the second asset, and receiving the first asset.
+        :param bytes asset1_address: The address of the first asset.
+        :param int asset1_quantity: The number of units of the first asset being sent.
+        :param bytes asset2_address: The address of the second asset.
+        :param int asset2_quantity: The number of units of the second asset being sent.
+        :param int fees: The fees to include in the transaction.
+        :return: The resulting unsigned transaction.
+        :rtype: CTransaction
+        """
+        return self.transfer(
+            unspent_outputs,
+            [
+                (asset1_from_script, asset2_from_script, asset1_address, asset1_quantity),
+                (asset2_from_script, asset1_from_script, asset2_address, asset2_quantity)
+            ],
+            asset1_from_script, asset1_from_script, 0, fees)
 
     def _collect_uncolored_outputs(self, unspent_outputs, from_script, amount):
         """

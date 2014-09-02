@@ -53,8 +53,8 @@ class ColoringEngineTests(unittest.TestCase):
             result = target.get_output(b'abcd', 2)
 
             self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEquals(get_patch.call_args_list[0][0], (b'abcd', 2))
-            self.assertEquals(3, len(put_patch.call_args_list))
+            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(3, len(put_patch.call_args_list))
             self.assert_output(put_patch.call_args_list[0][0][0], 1, b'\x10', b'a', 6, OutputType.issuance)
             self.assert_output(put_patch.call_args_list[1][0][0], 2, b'\x20', b'a', 2, OutputType.marker_output)
             self.assert_output(put_patch.call_args_list[2][0][0], 3, b'\x30', b'b', 1, OutputType.transfer)
@@ -72,7 +72,7 @@ class ColoringEngineTests(unittest.TestCase):
 
             self.assertRaises(ValueError, target.get_output, b'abcd', 2)
 
-            self.assertEquals(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
 
     def test_get_output_cached(self):
 
@@ -85,7 +85,7 @@ class ColoringEngineTests(unittest.TestCase):
             result = target.get_output(b'abcd', 2)
 
             self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEquals(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
 
     # color_transaction
 
@@ -298,7 +298,7 @@ class ColoringEngineTests(unittest.TestCase):
     def test_hash_script(self):
         previous_output = binascii.unhexlify('76a914010966776006953D5567439E5E39F86A0D273BEE88AC')
         output = openassets.protocol.ColoringEngine.hash_script(previous_output)
-        self.assertEquals(binascii.unhexlify('36e0ea8e93eaa0285d641305f4c81e563aa570a2'), output)
+        self.assertEqual(binascii.unhexlify('36e0ea8e93eaa0285d641305f4c81e563aa570a2'), output)
 
     # Test helpers
 
@@ -322,11 +322,11 @@ class ColoringEngineTests(unittest.TestCase):
             asset_quantities)
 
     def assert_output(self, output, nValue, scriptPubKey, asset_address, asset_quantity, output_type):
-        self.assertEquals(nValue, output.nValue)
-        self.assertEquals(scriptPubKey, bytes(output.scriptPubKey))
-        self.assertEquals(asset_address, output.asset_address)
-        self.assertEquals(asset_quantity, output.asset_quantity)
-        self.assertEquals(output_type, output.output_type)
+        self.assertEqual(nValue, output.nValue)
+        self.assertEqual(scriptPubKey, bytes(output.scriptPubKey))
+        self.assertEqual(asset_address, output.asset_address)
+        self.assertEqual(asset_quantity, output.asset_quantity)
+        self.assertEqual(output_type, output.output_type)
 
     def create_test_transaction(self, marker_output):
         return bitcoin.core.CTransaction(
@@ -355,12 +355,12 @@ class MarkerOutputTests(unittest.TestCase):
         def assert_leb128(value, data):
             # Check encoding
             encoded = openassets.protocol.MarkerOutput.leb128_encode(value)
-            self.assertEquals(data, encoded)
+            self.assertEqual(data, encoded)
 
             # Check decoding
             with io.BytesIO(data) as stream:
                 result = openassets.protocol.MarkerOutput.leb128_decode(stream)
-                self.assertEquals(value, result)
+                self.assertEqual(value, result)
 
         assert_leb128(0, b'\x00')
         assert_leb128(1, b'\x01')
@@ -384,7 +384,7 @@ class MarkerOutputTests(unittest.TestCase):
     def test_parse_script_success(self):
         def assert_parse_script(expected, data):
             script = bitcoin.core.CScript(data)
-            self.assertEquals(expected, openassets.protocol.MarkerOutput.parse_script(script))
+            self.assertEqual(expected, openassets.protocol.MarkerOutput.parse_script(script))
 
         assert_parse_script(b'', b'\x6a\x00')
         assert_parse_script(b'abcdef', b'\x6a\x06abcdef')
@@ -412,7 +412,7 @@ class MarkerOutputTests(unittest.TestCase):
     def test_build_script(self):
         def assert_build_script(expected_script, data):
             script = openassets.protocol.MarkerOutput.build_script(data)
-            self.assertEquals(expected_script, bytes(script))
+            self.assertEqual(expected_script, bytes(script))
 
         assert_build_script(b'\x6a\00', b'')
         assert_build_script(b'\x6a\05abcde', b'abcde')
@@ -423,12 +423,12 @@ class MarkerOutputTests(unittest.TestCase):
         def assert_deserialize_payload(asset_quantities, metadata, data):
             # Check serialization
             serialized_output = openassets.protocol.MarkerOutput(asset_quantities, metadata).serialize_payload()
-            self.assertEquals(data, serialized_output)
+            self.assertEqual(data, serialized_output)
 
             # Check deserialization
             marker_output = openassets.protocol.MarkerOutput.deserialize_payload(data)
-            self.assertEquals(asset_quantities, marker_output.asset_quantities)
-            self.assertEquals(metadata, marker_output.metadata)
+            self.assertEqual(asset_quantities, marker_output.asset_quantities)
+            self.assertEqual(metadata, marker_output.metadata)
 
         assert_deserialize_payload([5, 300], b'abcdef', b'OA\x01\x00' + b'\x02\x05\xac\x02' + b'\06abcdef')
         # Large number of asset quantities
@@ -465,11 +465,11 @@ class TransactionOutputTests(unittest.TestCase):
         target = openassets.protocol.TransactionOutput(
             100, bitcoin.core.CScript(b'abcd'), b'efgh', 2 ** 63 - 1, OutputType.transfer)
 
-        self.assertEquals(100, target.nValue)
-        self.assertEquals(b'abcd', bytes(target.scriptPubKey))
-        self.assertEquals(b'efgh', target.asset_address)
-        self.assertEquals(2 ** 63 - 1, target.asset_quantity)
-        self.assertEquals(OutputType.transfer, target.output_type)
+        self.assertEqual(100, target.nValue)
+        self.assertEqual(b'abcd', bytes(target.scriptPubKey))
+        self.assertEqual(b'efgh', target.asset_address)
+        self.assertEqual(2 ** 63 - 1, target.asset_quantity)
+        self.assertEqual(OutputType.transfer, target.output_type)
 
     def test_init_invalid_asset_quantity(self):
         # The asset quantity must be between 0 and 2**63 - 1
