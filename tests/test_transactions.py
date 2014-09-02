@@ -50,8 +50,11 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
         self.assertEqual(3, len(result.vout))
+        # Asset issued
         self.assert_output(result.vout[0], 10, b'target')
+        # Marker output
         self.assert_marker(result.vout[1], [1000], b'metadata')
+        # Bitcoin change
         self.assert_output(result.vout[2], 10, b'change')
 
     def test_issue_asset_insufficient_funds(self):
@@ -152,7 +155,7 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', b'a1', 50),
             (80, b'source', None, 0),
             (10, b'other', None, 0),
-            (10, b'source', b'a1', 100)
+            (20, b'source', b'a1', 100)
         ])
 
         result = self.target.transfer_assets(outputs, b'source', b'target', b'a1', 120, 40)
@@ -162,13 +165,14 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
         self.assertEqual(4, len(result.vout))
+        # Marker output
         self.assert_marker(result.vout[0], [120, 30], b'')
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
         # Asset change
         self.assert_output(result.vout[2], 10, b'source')
         # Bitcoin change
-        self.assert_output(result.vout[3], 40, b'source')
+        self.assert_output(result.vout[3], 50, b'source')
 
     def test_transfer_assets_no_change(self):
         outputs = self.generate_outputs([
@@ -185,6 +189,7 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
         self.assertEqual(3, len(result.vout))
+        # Marker output
         self.assert_marker(result.vout[0], [120], b'')
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
@@ -220,6 +225,7 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source_btc')
         self.assert_input(result.vin[3], b'4' * 32, 4, b'source_btc')
         self.assertEqual(5, len(result.vout))
+        # Marker output
         self.assert_marker(result.vout[0], [120, 30], b'')
         # Asset sent
         self.assert_output(result.vout[1], 10, b'source_btc')
@@ -248,6 +254,7 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assert_input(result.vin[2], b'2' * 32, 2, b'source_2')
         self.assert_input(result.vin[3], b'5' * 32, 5, b'source_1')
         self.assertEqual(6, len(result.vout))
+        # Marker output
         self.assert_marker(result.vout[0], [120, 60, 260, 340], b'')
         # Asset 1 sent
         self.assert_output(result.vout[1], 10, b'source_2')
