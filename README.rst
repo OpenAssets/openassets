@@ -21,11 +21,11 @@ Linux, OSX
 
 Using pip::
 
-    sudo pip install openassets
+    $ pip install openassets
 
 Or manually from source, assuming all required modules are installed on your system::
 
-    sudo python ./setup.py install
+    $ python ./setup.py install
 
 Windows
 -------
