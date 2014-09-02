@@ -202,7 +202,8 @@ class TransactionBuilder(object):
             ],
             asset1_from_script, asset1_from_script, 0, fees)
 
-    def _collect_uncolored_outputs(self, unspent_outputs, from_script, amount):
+    @staticmethod
+    def _collect_uncolored_outputs(unspent_outputs, from_script, amount):
         """
         Returns a list of uncolored outputs for the specified amount.
 
@@ -224,14 +225,15 @@ class TransactionBuilder(object):
 
         raise InsufficientFundsError
 
-    def _collect_colored_outputs(self, unspent_outputs, from_script, asset_address, amount):
+    @staticmethod
+    def _collect_colored_outputs(unspent_outputs, from_script, asset_address, asset_quantity):
         """
         Returns a list of uncolored outputs for the specified amount.
 
         :param list[SpendableOutput] unspent_outputs: The list of available outputs.
         :param bytes from_script: The source script to collect outputs from.
         :param bytes asset_address: The address of the asset to collect.
-        :param int amount: The amount to collect.
+        :param int asset_quantity: The asset quantity to collect.
         :return: A list of outputs, and the total asset quantity collected.
         :rtype: (list[SpendableOutput], int)
         """
@@ -242,7 +244,7 @@ class TransactionBuilder(object):
                 result.append(output)
                 total_amount += output.output.asset_quantity
 
-            if total_amount >= amount:
+            if total_amount >= asset_quantity:
                 return result, total_amount
 
         raise InsufficientAssetQuantityError

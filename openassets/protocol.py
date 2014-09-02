@@ -82,13 +82,14 @@ class ColoringEngine(object):
         :rtype: list[TransactionOutput]
         """
         for i, output in enumerate(transaction.vout):
+            # Parse the OP_RETURN script
             marker_output_payload = MarkerOutput.parse_script(output.scriptPubKey)
 
             if marker_output_payload is not None:
+                # Deserialize the payload as a marker output
                 marker_output = MarkerOutput.deserialize_payload(marker_output_payload)
 
                 if marker_output is not None:
-
                     # Fetch the colored outputs for previous transactions
                     inputs = [self.get_output(item.prevout.hash, item.prevout.n) for item in transaction.vin]
 
@@ -101,7 +102,9 @@ class ColoringEngine(object):
                     if asset_addresses is not None:
                         return asset_addresses
 
-        return [TransactionOutput(output.nValue, output.scriptPubKey, None, 0, OutputType.uncolored)
+        # If no valid marker output was found in the transaction, all outputs are considered uncolored
+        return [
+            TransactionOutput(output.nValue, output.scriptPubKey, None, 0, OutputType.uncolored)
             for output in transaction.vout]
 
     @classmethod
@@ -203,7 +206,8 @@ class OutputType(enum.Enum):
 class TransactionOutput(bitcoin.core.CTxOut):
     """Represents a transaction output with information about the asset address and asset quantity associated to it."""
 
-    def __init__(self,
+    def __init__(
+            self,
             nValue=-1,
             scriptPubKey=bitcoin.core.script.CScript(),
             asset_address=None,
@@ -216,7 +220,7 @@ class TransactionOutput(bitcoin.core.CTxOut):
         :param CScript scriptPubKey: The script controlling redemption of the output.
         :param bytes | None asset_address: The asset address of the output.
         :param int asset_quantity: The asset quantity of the output.
-        :param OutputType output_type: The type of output.
+        :param OutputType output_type: The type of the output.
         """
         assert 0 <= asset_quantity <= MarkerOutput.MAX_ASSET_QUANTITY
 
@@ -261,9 +265,10 @@ class TransactionOutput(bitcoin.core.CTxOut):
 
 
 class OutputCache(object):
-    """Represents an interface for an object capable of storing the result of output coloring."""
+    """Represents the interface for an object capable of storing the result of output coloring."""
 
-    def get(self, transaction_hash, output_index):
+    @staticmethod
+    def get(transaction_hash, output_index):
         """
         Returns a cached output.
 
@@ -275,7 +280,8 @@ class OutputCache(object):
         """
         return None
 
-    def put(self, output):
+    @staticmethod
+    def put(output):
         """
         Saves an output in cache.
 
@@ -393,7 +399,7 @@ class MarkerOutput(object):
     @classmethod
     def parse_script(cls, output_script):
         """
-        Parses an output and returns the payload if the output fits the right pattern for an open assets
+        Parses an output and returns the payload if the output matches the right pattern for an open assets
         marker output, or None otherwise.
 
         :param CScript output_script: The output script to be parsed.
@@ -425,8 +431,8 @@ class MarkerOutput(object):
         :return: The final script.
         :rtype: CScript
         """
-        return bitcoin.core.script.CScript(bytes([bitcoin.core.script.OP_RETURN]) + \
-            bitcoin.core.script.CScriptOp.encode_op_pushdata(data))
+        return bitcoin.core.script.CScript(
+            bytes([bitcoin.core.script.OP_RETURN]) + bitcoin.core.script.CScriptOp.encode_op_pushdata(data))
 
     @classmethod
     def leb128_decode(cls, data):
@@ -466,7 +472,7 @@ class MarkerOutput(object):
 
         result = []
         while value != 0:
-            byte = value & 0x7f;
+            byte = value & 0x7f
             value >>= 7
             if value != 0:
                 byte |= 0x80
