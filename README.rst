@@ -94,13 +94,18 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
     # The minimum valid value for an output is set to 600 satoshis
     builder = openassets.transactions.TransactionBuilder(600)
 
+    # Output script corresponding to address mihwXWqvcbrmgqMHXMHSTsH6Y36vwknwGi (in testnet)
+    output_script = bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac')
+
+    # Create the issuance transaction
     transaction = builder.issue(
-        unspent_outputs,
-        bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac'),  # Address the coins are issued from
-        bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac'),  # The coins are sent back to the same address
-        1500,                                                                  # Issue 1,500 units
-        b'',                                                                   # No metadata
-        10000)                                                                 # 0.0001 BTC fees
+        unspent_outputs=unspent_outputs,
+        from_script=output_script,          # Address the coins are issued from
+        to_script=output_script,            # The issued coins are sent back to the same address
+        change_script=output_script,        # The bitcoin change is sent back to the same address
+        asset_quantity=1500,                # Issue 1,500 units of the asset
+        metadata=b'',                       # No metadata
+        fees=10000)                         # 0.0001 BTC fees
 
     print(transaction)
 

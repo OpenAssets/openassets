@@ -43,14 +43,15 @@ class TransactionBuilder(object):
         """
         self._dust_amount = dust_amount
 
-    def issue(self, unspent_outputs, from_script, to_script, asset_quantity, metadata, fees):
+    def issue(self, unspent_outputs, from_script, to_script, change_script, asset_quantity, metadata, fees):
         """
         Creates a transaction for issuing an asset.
 
         :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
-        :param bytes from_script: The origin script.
-        :param bytes to_script: The destination script.
-        :param int asset_quantity: The quantity to be issued.
+        :param bytes from_script: The script from which the coins are issued. This determines the asset address.
+        :param bytes to_script: The script where the issued coins are sent.
+        :param bytes change_script: The script where uncolored change is sent.
+        :param int asset_quantity: The number of units to be issued.
         :param bytes metadata: The metadata to be embedded in the transaction.
         :param int fees: The fees to include in the transaction.
         :return: An unsigned transaction for issuing an asset.
@@ -64,7 +65,7 @@ class TransactionBuilder(object):
             vout=[
                 self._get_colored_output(to_script),
                 self._get_marker_output([asset_quantity], metadata),
-                self._get_uncolored_output(from_script, total_amount - self._dust_amount - fees)
+                self._get_uncolored_output(change_script, total_amount - self._dust_amount - fees)
             ]
         )
 

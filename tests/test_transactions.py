@@ -44,7 +44,7 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', None, 0)
         ])
 
-        result = self.target.issue(outputs, b'source', b'target', 1000, b'metadata', 5)
+        result = self.target.issue(outputs, b'source', b'target', b'change', 1000, b'metadata', 5)
 
         self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
@@ -52,7 +52,7 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assertEqual(3, len(result.vout))
         self.assert_output(result.vout[0], 10, b'target')
         self.assert_marker(result.vout[1], [1000], b'metadata')
-        self.assert_output(result.vout[2], 10, b'source')
+        self.assert_output(result.vout[2], 10, b'change')
 
     def test_issue_asset_insufficient_funds(self):
         outputs = self.generate_outputs([
@@ -64,7 +64,7 @@ class TransactionBuilderTests(unittest.TestCase):
 
         self.assertRaises(
             openassets.transactions.InsufficientFundsError,
-            self.target.issue, outputs, 1000, b'metadata', b'source', b'target', 5)
+            self.target.issue, outputs, b'source', b'target', b'change', 1000, b'metadata', 5)
 
     def test_transfer_bitcoin_with_change(self):
         outputs = self.generate_outputs([
