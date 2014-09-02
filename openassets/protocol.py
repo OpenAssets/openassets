@@ -51,7 +51,7 @@ class ColoringEngine(object):
         :return: An object containing the output and the asset address and quantity.
         :rtype: TransactionOutput
         """
-        cached_output = self._cache.get_output(transaction_hash, output_index)
+        cached_output = self._cache.get(transaction_hash, output_index)
 
         if cached_output is not None:
             return cached_output
@@ -59,12 +59,12 @@ class ColoringEngine(object):
         transaction = self._transaction_provider(transaction_hash)
 
         if transaction is None:
-            return None
+            raise ValueError("Transaction {0} could not be retrieved".format(bitcoin.core.b2lx(transaction_hash)))
 
         colored_outputs = self.color_transaction(transaction)
 
         for output in colored_outputs:
-            self._cache.set_output(output)
+            self._cache.put(output)
 
         return colored_outputs[output_index]
 
@@ -96,7 +96,8 @@ class ColoringEngine(object):
                     if asset_addresses is not None:
                         return asset_addresses
 
-        return [TransactionOutput(output, None, 0, OutputType.uncolored) for output in transaction.vout]
+        return [TransactionOutput(output.nValue, output.scriptPubKey, None, 0, OutputType.uncolored)
+            for output in transaction.vout]
 
     @classmethod
     def _compute_asset_addresses(cls, inputs, marker_output_index, outputs, asset_quantities):
@@ -118,13 +119,16 @@ class ColoringEngine(object):
         result = []
 
         # Add the issuance outputs
-        issuance_address = cls.hash_script(bytes(inputs[0].output.scriptPubKey))
+        issuance_address = cls.hash_script(bytes(inputs[0].scriptPubKey))
 
         for i in range(0, marker_output_index):
-            result.append(TransactionOutput(outputs[i], issuance_address, asset_quantities[i], OutputType.issuance))
+            result.append(TransactionOutput(
+                outputs[i].nValue, outputs[i].scriptPubKey, issuance_address, asset_quantities[i], OutputType.issuance))
 
         # Add the marker output
-        result.append(TransactionOutput(outputs[marker_output_index], None, 0, OutputType.marker_output))
+        issuance_output = outputs[marker_output_index]
+        result.append(TransactionOutput(
+            issuance_output.nValue, issuance_output.scriptPubKey, None, 0, OutputType.marker_output))
 
         # Add the transfer outputs
         input_iterator = iter(inputs)
@@ -164,7 +168,8 @@ class ColoringEngine(object):
                         # the transaction is considered invalid
                         return None
 
-            result.append(TransactionOutput(outputs[i], asset_address, output_asset_quantity, OutputType.transfer))
+            result.append(TransactionOutput(
+                outputs[i].nValue, outputs[i].scriptPubKey, asset_address, output_asset_quantity, OutputType.transfer))
 
         return result
 
@@ -183,32 +188,6 @@ class ColoringEngine(object):
         return ripemd.digest()
 
 
-class TransactionOutput(object):
-    """Represents a transaction output with information about the asset address and asset quantity associated to it."""
-
-    output = property(lambda self: self._output)
-    asset_address = property(lambda self: self._asset_address)
-    asset_quantity = property(lambda self: self._asset_quantity)
-    output_type = property(lambda self: self._output_type)
-
-    def __init__(self, output, asset_address, asset_quantity, output_type):
-        """
-        Initializes a new instance of the TransactionOutput class.
-
-        :param CTxOut output: The output object.
-        :param bytes asset_address: The asset address of the output.
-        :param int asset_quantity: The asset quantity of the output.
-        :param OutputType output_type: The type of output.
-        """
-        self._output = output
-        self._asset_address = asset_address
-        self._asset_quantity = asset_quantity
-        self._output_type = output_type
-
-    def __repr__(self):
-        return "TransactionOutput(%r, %r, %r, %r)" % (self.output, self.asset_address, self.asset_quantity, self.output_type)
-
-
 class OutputType(enum.Enum):
     uncolored = 0
     marker_output = 1
@@ -216,10 +195,44 @@ class OutputType(enum.Enum):
     transfer = 3
 
 
+class TransactionOutput(bitcoin.core.CTxOut):
+    """Represents a transaction output with information about the asset address and asset quantity associated to it."""
+
+    asset_address = property(lambda self: self._asset_address)
+    asset_quantity = property(lambda self: self._asset_quantity)
+    output_type = property(lambda self: self._output_type)
+
+    def __init__(self,
+            nValue=-1,
+            scriptPubKey=bitcoin.core.script.CScript(),
+            asset_address=None,
+            asset_quantity=0,
+            output_type=OutputType.uncolored):
+        """
+        Initializes a new instance of the TransactionOutput class.
+
+        :param int nValue: The satoshi value of the output.
+        :param CScript scriptPubKey: The script controlling redemption of the output.
+        :param bytes | None asset_address: The asset address of the output.
+        :param int asset_quantity: The asset quantity of the output.
+        :param OutputType output_type: The type of output.
+        """
+        assert 0 <= asset_quantity <= MarkerOutput.MAX_ASSET_QUANTITY
+
+        super(TransactionOutput, self).__init__(nValue=nValue, scriptPubKey=scriptPubKey)
+        self._asset_address = asset_address
+        self._asset_quantity = asset_quantity
+        self._output_type = output_type
+
+    def __repr__(self):
+        return "TransactionOutput(nValue=%r, scriptPubKey=%r, asset_address=%r, asset_quantity=%r, output_type=%r)" % \
+            (self.nValue, self.scriptPubKey, self.asset_address, self.asset_quantity, self.output_type)
+
+
 class OutputCache(object):
     """Represents an interface for an object capable of storing the result of output coloring."""
 
-    def get_output(self, transaction_hash, output_index):
+    def get(self, transaction_hash, output_index):
         """
         Returns a cached output.
 
@@ -231,7 +244,7 @@ class OutputCache(object):
         """
         return None
 
-    def set_output(self, output):
+    def put(self, output):
         """
         Saves an output in cache.
 
@@ -359,4 +372,4 @@ class MarkerOutput(object):
         return result
 
     def __repr__(self):
-        return "MarkerOutputPayload(asset_quantities = %r, metadata = %r)" % (self.asset_quantities, self.metadata)
+        return "MarkerOutputPayload(asset_quantities=%r, metadata=%r)" % (self.asset_quantities, self.metadata)
