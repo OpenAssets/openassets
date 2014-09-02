@@ -9,22 +9,23 @@ with open(os.path.join(here, 'README.rst')) as f:
     README = f.read()
 
 setuptools.setup(
-    name = "openassets",
+    name = 'openassets',
     version = openassets.__version__,
-    packages = [ "openassets" ],
-    description = "Reference implementation of the Open Assets Protocol",
-    author = "Flavien Charlon",
-    url = "https://github.com/OpenAssets/openassets",
-    license = "MIT License",
+    packages = [ 'openassets' ],
+    description = 'Reference implementation of the Open Assets Protocol',
+    author = 'Flavien Charlon',
+    author_email = 'flavien@charlon.net',
+    url = 'https://github.com/OpenAssets/openassets',
+    license = 'MIT License',
     install_requires = [
-        "python-bitcoinlib == 0.1.1"
+        'python-bitcoinlib == 0.1.1'
     ],
-    test_suite = "tests",
+    test_suite = 'tests',
     classifiers = [
-        "Development Status :: 5 - Production/Stable",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Topic :: Software Development :: Libraries :: Python Modules"
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Topic :: Software Development :: Libraries :: Python Modules'
     ]
 )

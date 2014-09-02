@@ -1,7 +1,7 @@
 Open Assets Reference Implementation
 ====================================
 
-The ``openassets`` Python package is the reference implementation of the colored coins `Open Assets Protocol <https://github.com/OpenAssets/open-assets-protocol/blob/master/specification.mediawiki>`_.
+The ``openassets`` Python package is the reference implementation of the colored coins `Open Assets Protocol <https://github.com/OpenAssets/open-assets-protocol>`_.
 
 Open Assets is a protocol for issuing and transferring custom digital tokens in a secure way on the Bitcoin blockchain (or any compatible blockchain).
 
@@ -30,10 +30,11 @@ Or manually from source, assuming all required modules are installed on your sys
 Windows
 -------
 
-1) Make sure you have Python 3 and pip installed
-    * http://www.anthonydebarros.com/2011/10/15/setting-up-python-in-windows-7/
+1) Make sure you have `Python 3 and pip <http://www.anthonydebarros.com/2011/10/15/setting-up-python-in-windows-7/>`_ installed
 2) Open the command prompt: Start Menu > Accessories > Command Prompt
-3) Run the following command: ``pip install openassets``
+3) Run the following command::
+
+    pip install openassets
 
 Overview
 ========
