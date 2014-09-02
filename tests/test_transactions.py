@@ -34,25 +34,9 @@ class TransactionBuilderTests(unittest.TestCase):
     def setUp(self):
         self.target = openassets.transactions.TransactionBuilder(10)
 
+    # issue_asset
+
     def test_issue_asset_success(self):
-        outputs = self.generate_outputs([
-            (20, b'source', b'a1', 50),
-            (15, b'source', None, 0),
-            (20, b'other', None, 0),
-            (5, b'source', None, 0)
-        ])
-
-        result = self.target.issue_asset(outputs, 1000, b'metadata', b'source', b'target', 0)
-
-        self.assertEquals(2, len(result.vin))
-        self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
-        self.assertEquals(3, len(result.vout))
-        self.assert_marker(result.vout[0], [1000], b'metadata')
-        self.assert_output(result.vout[1], 10, b'target')
-        self.assert_output(result.vout[2], 10, b'source')
-
-    def test_issue_asset_fees(self):
         outputs = self.generate_outputs([
             (20, b'source', b'a1', 50),
             (15, b'source', None, 0),
@@ -60,7 +44,7 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', None, 0)
         ])
 
-        result = self.target.issue_asset(outputs, 1000, b'metadata', b'source', b'target', 5)
+        result = self.target.issue(outputs, 1000, b'metadata', b'source', b'target', 5)
 
         self.assertEquals(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
@@ -80,7 +64,24 @@ class TransactionBuilderTests(unittest.TestCase):
 
         self.assertRaises(
             openassets.transactions.InsufficientFundsError,
-            self.target.issue_asset, outputs, 1000, b'metadata', b'source', b'target', 5)
+            self.target.issue, outputs, 1000, b'metadata', b'source', b'target', 5)
+
+    def test_transfer_bitcoin(self):
+        outputs = self.generate_outputs([
+            (150, b'source', b'a1', 50),
+            (150, b'source', None, 0),
+            (150, b'other', None, 0),
+            (150, b'source', None, 0)
+        ])
+
+        result = self.target.transfer_bitcoin(outputs, b'source', b'target', 200, 10)
+
+        self.assertEquals(2, len(result.vin))
+        self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
+        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assertEquals(2, len(result.vout))
+        self.assert_output(result.vout[0], 90, b'source')
+        self.assert_output(result.vout[1], 200, b'target')
 
     # Test helpers
 
@@ -114,3 +115,13 @@ class TransactionBuilderTests(unittest.TestCase):
         self.assertEquals(0, output.nValue)
         self.assertEquals(asset_quantities, marker_output.asset_quantities)
         self.assertEquals(metadata, marker_output.metadata)
+
+
+class SpendableOutputTests(unittest.TestCase):
+    def test_init_success(self):
+        target = openassets.transactions.SpendableOutput(
+            bitcoin.core.COutPoint('\x01' * 32),
+            openassets.protocol.TransactionOutput(100))
+
+        self.assertEquals('\x01' * 32, target.out_point.hash)
+        self.assertEquals(100, target.output.nValue)

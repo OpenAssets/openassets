@@ -43,7 +43,7 @@ class TransactionBuilder(object):
         """
         self._dust_amount = dust_amount
 
-    def issue_asset(self, unspent_outputs, asset_quantity, metadata, from_script, to_script, fees):
+    def issue(self, unspent_outputs, asset_quantity, metadata, from_script, to_script, fees):
         """
         Creates a transaction for issuing an asset.
 
@@ -56,30 +56,34 @@ class TransactionBuilder(object):
         :return: A transaction for issuing an asset.
         :rtype: CTransaction
         """
-        inputs, total_amount = self.__collect_uncolored_outputs(
+        inputs, total_amount = self._collect_uncolored_outputs(
             unspent_outputs, from_script, 2 * self._dust_amount + fees)
 
         return bitcoin.core.CTransaction(
             vin=[bitcoin.core.CTxIn(item.out_point, item.output.scriptPubKey) for item in inputs],
             vout=[
-                self.__get_marker_output([asset_quantity], metadata),
-                self.__get_colored_output(to_script),
-                self.__get_uncolored_output(from_script, total_amount - self._dust_amount - fees)
+                self._get_marker_output([asset_quantity], metadata),
+                self._get_colored_output(to_script),
+                self._get_uncolored_output(from_script, total_amount - self._dust_amount - fees)
             ]
         )
 
-    def send(self, unspent_outputs, transfer_spec, from_btc, to_btc, amount_btc, fees):
+    def transfer(self, unspent_outputs, transfer_spec, from_btc, to_btc, amount_btc, fees):
         """
-        Creates a transaction for sending assets and bitcoins.
+        Creates a transaction for sending assets and Bitcoins.
 
-        :param unspent_outputs:
+        :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
         :param list[(bytes, bytes, bytes, int)] transfer_spec: A list of tuples. In each tuple:
             - The first element is the spending script.
             - The second element is the receiving script.
             - The third element is the asset address of the asset being sent.
             - The fourth element is the number of asset units being sent.
+        :param bytes from_btc: The script from which to pay Bitcoins.
+        :param bytes to_btc: The script receiving the Bitcoin payment.
+        :param int amount_btc: The amount of satoshis to send.
         :param int fees: The fees to include in the transaction.
-        :return:
+        :return: A transaction for sending assets and Bitcoins.
+        :rtype: CTransaction
         """
         inputs = []
         outputs = []
@@ -87,17 +91,55 @@ class TransactionBuilder(object):
         for color_send in transfer_spec:
             asset_quantity = color_send[3]
             asset_address = color_send[2]
-            colored_outputs, collected_amount = self.__collect_colored_outputs(
+            colored_outputs, collected_amount = self._collect_colored_outputs(
                 unspent_outputs, color_send[0], asset_address, asset_quantity)
             inputs.extend(colored_outputs)
-            outputs.append(self.__get_colored_output(color_send[1]))
+            outputs.append(self._get_colored_output(color_send[1]))
             asset_quantities.append(asset_quantity)
 
             if collected_amount > asset_quantity:
-                outputs.append(self.__get_colored_output(color_send[0]))
+                outputs.append(self._get_colored_output(color_send[0]))
                 asset_quantities.append(collected_amount - asset_quantity)
 
-    def __collect_uncolored_outputs(self, unspent_outputs, from_script, amount):
+        btc_excess = sum([input.output.nValue for input in inputs]) - sum([output.nValue for output in outputs])
+
+        if btc_excess < amount_btc + fees:
+            # Not enough Bitcoin inputs
+            uncolored_outputs, total_amount = self._collect_uncolored_outputs(
+                unspent_outputs, from_btc, amount_btc + fees - btc_excess)
+            inputs.extend(uncolored_outputs)
+            btc_excess += total_amount
+
+        if btc_excess > amount_btc + fees:
+            # Too much Bitcoin in input, send it back as change
+            outputs.append(self._get_uncolored_output(from_btc, btc_excess - amount_btc - fees))
+
+        if amount_btc > 0:
+            outputs.append(self._get_uncolored_output(to_btc, amount_btc))
+
+        if asset_quantities:
+            outputs.insert(0, self._get_marker_output(asset_quantities, b''))
+
+        return bitcoin.core.CTransaction(
+            vin=[bitcoin.core.CTxIn(item.out_point, item.output.scriptPubKey) for item in inputs],
+            vout=outputs
+        )
+
+    def transfer_bitcoin(self, unspent_outputs, from_script, to_script, amount_btc, fees):
+        """
+        Creates a transaction for sending Bitcoins.
+
+        :param list[SpendableOutput] unspent_outputs: A list of unspent outputs.
+        :param bytes from_script: The script from which to pay Bitcoins.
+        :param bytes to_script: The script receiving the Bitcoin payment.
+        :param int amount_btc: The amount of satoshis to send.
+        :param int fees: The fees to include in the transaction.
+        :return: A transaction for sending Bitcoins.
+        :rtype: CTransaction
+        """
+        return self.transfer(unspent_outputs, [], from_script, to_script, amount_btc, fees)
+
+    def _collect_uncolored_outputs(self, unspent_outputs, from_script, amount):
         """
         Returns a list of uncolored outputs for the specified amount.
 
@@ -119,7 +161,7 @@ class TransactionBuilder(object):
 
         raise InsufficientFundsError
 
-    def __collect_colored_outputs(self, unspent_outputs, from_script, asset_address, amount):
+    def _collect_colored_outputs(self, unspent_outputs, from_script, asset_address, amount):
         """
         Returns a list of uncolored outputs for the specified amount.
 
@@ -142,7 +184,7 @@ class TransactionBuilder(object):
 
         raise InsufficientFundsError
 
-    def __get_uncolored_output(self, script, value):
+    def _get_uncolored_output(self, script, value):
         """
         Creates an output transferring uncolored coins.
 
@@ -153,20 +195,17 @@ class TransactionBuilder(object):
         """
         return bitcoin.core.CTxOut(value, bitcoin.core.CScript(script))
 
-    def __get_colored_output(self, script):
+    def _get_colored_output(self, script):
         """
         Creates an output transferring uncolored coins.
 
         :param bytes script: The output script.
-        :param bytes asset_address: The output script.
-        :param int asset_quantity: The output script.
-        :param OutputType output_type: The output script.
         :return: The new script object.
         :rtype: TransactionOutput
         """
         return bitcoin.core.CTxOut(self._dust_amount, bitcoin.core.CScript(script))
 
-    def __get_marker_output(self, asset_quantities, metadata):
+    def _get_marker_output(self, asset_quantities, metadata):
         """
         Creates a marker output for open assets.
 
