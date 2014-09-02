@@ -49,7 +49,7 @@ class ColoringEngine(object):
         :param bytes transaction_hash: The hash of the transaction containing the output.
         :param int output_index: The index of the output.
         :return: An object containing the output and the asset address and quantity.
-        :rtype: Output
+        :rtype: TransactionOutput
         """
         cached_output = self._cache.get_output(transaction_hash, output_index)
 
@@ -74,10 +74,10 @@ class ColoringEngine(object):
 
         :param CTransaction transaction: The transaction to color.
         :return: A list containing all the colored outputs of the transaction.
-        :rtype: list[Output]
+        :rtype: list[TransactionOutput]
         """
         for i, output in enumerate(transaction.vout):
-            marker_output_payload = MarkerOutput.parse_marker_output(output.scriptPubKey)
+            marker_output_payload = MarkerOutput.parse_script(output.scriptPubKey)
 
             if marker_output_payload is not None:
                 marker_output = MarkerOutput.deserialize_payload(marker_output_payload)
@@ -96,19 +96,19 @@ class ColoringEngine(object):
                     if asset_addresses is not None:
                         return asset_addresses
 
-        return [Output(output, None, None, None) for output in transaction.vout]
+        return [TransactionOutput(output, None, None, None) for output in transaction.vout]
 
     @classmethod
     def _compute_asset_addresses(cls, inputs, marker_output_index, outputs, asset_quantities):
         """
         Computes the asset addresses of every output in a transaction.
 
-        :param list[Output] inputs: The outputs referenced by the inputs of the transaction.
+        :param list[TransactionOutput] inputs: The outputs referenced by the inputs of the transaction.
         :param int marker_output_index: The position of the marker output in the transaction.
         :param list[CTxOut] outputs: The outputs of the transaction.
         :param list[int] asset_quantities: The list of asset quantities of the outputs.
         :return: A list of outputs with asset address and quantity information.
-        :rtype: list[OAOutput]
+        :rtype: list[TransactionOutput]
         """
         # If there are more items in the asset quantities list than outputs in the transaction (excluding the
         # marker output), the transaction is considered invalid
@@ -118,22 +118,22 @@ class ColoringEngine(object):
         result = []
 
         # Add the issuance outputs
-        issuance_address = cls.__hash_script(bytes(inputs[0].output.scriptPubKey))
+        issuance_address = cls.hash_script(bytes(inputs[0].output.scriptPubKey))
 
         for i in range(0, marker_output_index):
-            result.append(Output(outputs[i], issuance_address, asset_quantities[i], OutputType.issuance))
+            result.append(TransactionOutput(outputs[i], issuance_address, asset_quantities[i], OutputType.issuance))
 
         # Add the marker output
-        result.append(Output(outputs[marker_output_index], None, 0, OutputType.marker_output))
+        result.append(TransactionOutput(outputs[marker_output_index], None, 0, OutputType.marker_output))
 
         # Add the transfer outputs
         input_iterator = iter(inputs)
         input_units_left = 0
         for i in range(marker_output_index + 1, len(outputs)):
-            if i > len(asset_quantities) - 1:
-                output_asset_quantity = 0
+            if i <= len(asset_quantities):
+                output_asset_quantity = asset_quantities[i - 1]
             else:
-                output_asset_quantity = asset_quantities[i]
+                output_asset_quantity = 0
 
             output_units_left = output_asset_quantity
             asset_address = None
@@ -164,12 +164,12 @@ class ColoringEngine(object):
                         # the transaction is considered invalid
                         return None
 
-            result.append(Output(outputs[i], asset_address, output_asset_quantity, OutputType.transfer))
+            result.append(TransactionOutput(outputs[i], asset_address, output_asset_quantity, OutputType.transfer))
 
         return result
 
     @classmethod
-    def __hash_script(cls, data):
+    def hash_script(cls, data):
         """
         Hash a script into a pay-to-script-hash address using SHA256 followed by RIPEMD160.
 
@@ -183,7 +183,7 @@ class ColoringEngine(object):
         return ripemd.digest()
 
 
-class Output(object):
+class TransactionOutput(object):
     """Represents a transaction output with information about the asset address and asset quantity associated to it."""
 
     output = property(lambda self: self._output)
@@ -193,7 +193,7 @@ class Output(object):
 
     def __init__(self, output, asset_address, asset_quantity, output_type):
         """
-        Initializes a new instance of the Output class.
+        Initializes a new instance of the TransactionOutput class.
 
         :param CTxOut output: The output object.
         :param bytes asset_address: The asset address of the output.
@@ -206,7 +206,7 @@ class Output(object):
         self._output_type = output_type
 
     def __repr__(self):
-        return "Output(%r, %r, %r, %r)" % (self.output, self.asset_address, self.asset_quantity, self.output_type)
+        return "TransactionOutput(%r, %r, %r, %r)" % (self.output, self.asset_address, self.asset_quantity, self.output_type)
 
 
 class OutputType(enum.Enum):
@@ -217,7 +217,7 @@ class OutputType(enum.Enum):
 
 
 class OutputCache(object):
-    """The interface for an object capable of storing the result of output coloring."""
+    """Represents an interface for an object capable of storing the result of output coloring."""
 
     def get_output(self, transaction_hash, output_index):
         """
@@ -227,7 +227,7 @@ class OutputCache(object):
         :param int output_index: The index of the output in the transaction.
         :return: The output for the transaction hash and output index provided if it is found in the cache, or None
             otherwise.
-        :rtype: Output
+        :rtype: TransactionOutput
         """
         return None
 
@@ -235,7 +235,7 @@ class OutputCache(object):
         """
         Saves an output in cache.
 
-        :param Output output: The output to save.
+        :param TransactionOutput output: The output to save.
         """
         pass
 
@@ -274,24 +274,37 @@ class MarkerOutput(object):
             if oa_version != b'OA\x01\x00':
                 return None
 
-            # A var-integer representing the number of items in the  asset quantity list  field
-            output_count = bitcoin.core.VarIntSerializer.stream_deserialize(stream)
+            try:
+                # A var-integer representing the number of items in the  asset quantity list  field
+                output_count = bitcoin.core.VarIntSerializer.stream_deserialize(stream)
 
-            # LEB128-encoded unsigned integers representing the asset quantity of every output in order
-            asset_quantities = []
-            for i in range(0, output_count):
-                asset_quantity = MarkerOutput.leb128_decode(stream)
+                # LEB128-encoded unsigned integers representing the asset quantity of every output in order
+                asset_quantities = []
+                for i in range(0, output_count):
+                    asset_quantity = MarkerOutput.leb128_decode(stream)
 
-                if asset_quantity > cls.MAX_ASSET_QUANTITY:
+                    if asset_quantity > cls.MAX_ASSET_QUANTITY:
+                        return None
+
+                    asset_quantities.append(asset_quantity)
+
+                # The var-integer encoded length of the  metadata field.
+                metadata_length = bitcoin.core.VarIntSerializer.stream_deserialize(stream)
+
+                # The actual metadata
+                metadata = stream.read(metadata_length)
+
+                # If the metadata string wasn't long enough, the marker output is malformed
+                if len(metadata) != metadata_length:
                     return None
 
-                asset_quantities.append(asset_quantity)
+                # If there are bytes left to read, the marker output is malformed
+                last_byte = stream.read(1)
+                if len(last_byte) > 0:
+                    return None
 
-            # The var-integer encoded length of the  metadata  field.
-            metadata_length = bitcoin.core.VarIntSerializer.stream_deserialize(stream)
-
-            # The actual metadata
-            metadata = stream.read(metadata_length)
+            except bitcoin.core.SerializationTruncationError:
+                return None
 
             return MarkerOutput(asset_quantities, metadata)
 
@@ -334,7 +347,11 @@ class MarkerOutput(object):
         shift = 0
 
         while True:
-            b = ord(data.read(1))
+            character = data.read(1)
+            if len(character) == 0:
+                raise bitcoin.core.SerializationTruncationError("Invalid LEB128 integer")
+
+            b = ord(character)
             result |= (b & 0x7f) << shift
             if b & 0x80 == 0:
                 break
