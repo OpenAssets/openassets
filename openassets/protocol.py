@@ -96,7 +96,7 @@ class ColoringEngine(object):
                     if asset_addresses is not None:
                         return asset_addresses
 
-        return [TransactionOutput(output, None, None, None) for output in transaction.vout]
+        return [TransactionOutput(output, None, 0, OutputType.uncolored) for output in transaction.vout]
 
     @classmethod
     def _compute_asset_addresses(cls, inputs, marker_output_index, outputs, asset_quantities):

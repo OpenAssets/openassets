@@ -27,11 +27,69 @@ import bitcoin.core
 import io
 import openassets.protocol
 import unittest
+import unittest.mock
 
 
 class ColoringEngineTests(unittest.TestCase):
-    # def setUp(self):
-    # self.seq = list(range(10))
+
+    # color_transaction
+
+    def test_color_transaction_success(self):
+        target = openassets.protocol.ColoringEngine(None, None)
+
+        def color_transaction(marker_output):
+            transaction = bitcoin.core.CTransaction(
+                [
+                    bitcoin.core.CTxIn(bitcoin.core.COutPoint(b"\x01" * 32, 1)),
+                    bitcoin.core.CTxIn(bitcoin.core.COutPoint(b"\x02" * 32, 2)),
+                    bitcoin.core.CTxIn(bitcoin.core.COutPoint(b"\x03" * 32, 3))
+                ],
+                [
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(b"")),
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(marker_output)),
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(b""))
+                ]
+            )
+
+            side_effect = [
+                openassets.protocol.TransactionOutput(
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(b"\x10")),
+                    b"a", 6, None),
+                openassets.protocol.TransactionOutput(
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(b"\x20")),
+                    b"a", 2, None),
+                openassets.protocol.TransactionOutput(
+                    bitcoin.core.CTxOut(scriptPubKey=bitcoin.core.CScript(b"\x30")),
+                    b"a", 1, None),
+            ]
+
+            with unittest.mock.patch("openassets.protocol.ColoringEngine.get_output",
+                unittest.mock.Mock(side_effect=side_effect)):
+                return target.color_transaction(transaction)
+
+        # Valid transaction
+        outputs = color_transaction(b"\x6a\x08" + b"OA\x01\x00" + b"\x02\x05\x09" + b"\00")
+
+        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b"\x10")
+        self.assert_output(outputs[0], issuance_asset_address, 5, openassets.protocol.OutputType.issuance)
+        self.assert_output(outputs[1], None, 0, openassets.protocol.OutputType.marker_output)
+        self.assert_output(outputs[2], b"a", 9, openassets.protocol.OutputType.transfer)
+
+        # Invalid payload
+        outputs = color_transaction(b"\x6a\x04" + b"OA\x01\x00")
+
+        self.assert_output(outputs[0], None, 0, openassets.protocol.OutputType.uncolored)
+        self.assert_output(outputs[1], None, 0, openassets.protocol.OutputType.uncolored)
+        self.assert_output(outputs[2], None, 0, openassets.protocol.OutputType.uncolored)
+
+        # Invalid coloring (more asset quantities than outputs)
+        outputs = color_transaction(b"\x6a\x08" + b"OA\x01\x00" + b"\x03\x05\x09\x08" + b"\00")
+
+        self.assert_output(outputs[0], None, 0, openassets.protocol.OutputType.uncolored)
+        self.assert_output(outputs[1], None, 0, openassets.protocol.OutputType.uncolored)
+        self.assert_output(outputs[2], None, 0, openassets.protocol.OutputType.uncolored)
+
+    # compute_asset_addresses
 
     def test_compute_asset_addresses_issuance(self):
         outputs = self.color_outputs(
@@ -203,10 +261,14 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[3], b"a", 2, openassets.protocol.OutputType.transfer)
         self.assert_output(outputs[4], b"a", 3, openassets.protocol.OutputType.transfer)
 
+    # hash_script
+
     def test_hash_script(self):
         previous_output = binascii.unhexlify('76a914010966776006953D5567439E5E39F86A0D273BEE88AC')
         output = openassets.protocol.ColoringEngine.hash_script(previous_output)
         self.assertEquals(binascii.unhexlify('36e0ea8e93eaa0285d641305f4c81e563aa570a2'), output)
+
+    # Test helpers
 
     def color_outputs(self, inputs, asset_quantities, output_count, marker_index=0):
         previous_outputs = [
