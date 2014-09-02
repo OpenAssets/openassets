@@ -351,30 +351,35 @@ class ColoringEngineTests(unittest.TestCase):
 
 
 class MarkerOutputTests(unittest.TestCase):
-    def test_leb128_decode_success(self):
-        def assert_leb128_decode(expected, data):
+    def test_leb128_encode_decode_success(self):
+        def assert_leb128(value, data):
+            # Check encoding
+            encoded = openassets.protocol.MarkerOutput.leb128_encode(value)
+            self.assertEquals(data, encoded)
+
+            # Check decoding
             with io.BytesIO(data) as stream:
                 result = openassets.protocol.MarkerOutput.leb128_decode(stream)
-                self.assertEquals(expected, result)
+                self.assertEquals(value, result)
 
-        assert_leb128_decode(0, b'\x00')
-        assert_leb128_decode(1, b'\x01')
-        assert_leb128_decode(127, b'\x7F')
-        assert_leb128_decode(128, b'\x80\x01')
-        assert_leb128_decode(0xff, b'\xff\x01')
-        assert_leb128_decode(0x100, b'\x80\x02')
-        assert_leb128_decode(300, b'\xac\x02')
-        assert_leb128_decode(624485, b'\xe5\x8e\x26')
-        assert_leb128_decode(0xffffff, b'\xff\xff\xff\x07')
-        assert_leb128_decode(0x1000000, b'\x80\x80\x80\x08')
-        assert_leb128_decode(2 ** 64, b'\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02')
+        assert_leb128(0, b'\x00')
+        assert_leb128(1, b'\x01')
+        assert_leb128(127, b'\x7F')
+        assert_leb128(128, b'\x80\x01')
+        assert_leb128(0xff, b'\xff\x01')
+        assert_leb128(0x100, b'\x80\x02')
+        assert_leb128(300, b'\xac\x02')
+        assert_leb128(624485, b'\xe5\x8e\x26')
+        assert_leb128(0xffffff, b'\xff\xff\xff\x07')
+        assert_leb128(0x1000000, b'\x80\x80\x80\x08')
+        assert_leb128(2 ** 64, b'\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02')
 
     def test_leb128_decode_invalid(self):
         data = b'\xe5\x8e'
 
         with io.BytesIO(data) as stream:
             self.assertRaises(bitcoin.core.SerializationTruncationError,
-                              openassets.protocol.MarkerOutput.leb128_decode, stream)
+                openassets.protocol.MarkerOutput.leb128_decode, stream)
 
     def test_parse_script_success(self):
         def assert_parse_script(expected, data):
@@ -404,17 +409,34 @@ class MarkerOutputTests(unittest.TestCase):
         assert_parse_script(b'\x6a\x06abcdef\x01a')
         assert_parse_script(b'\x6a\x06abcdef\x75')
 
-    def test_deserialize_payload_success(self):
-        def assert_deserialize_payload(expected_asset_quantities, expected_metadata, data):
-            marker_output = openassets.protocol.MarkerOutput.deserialize_payload(data)
-            self.assertEquals(expected_asset_quantities, marker_output.asset_quantities)
-            self.assertEquals(expected_metadata, marker_output.metadata)
+    def test_build_script(self):
+        def assert_build_script(expected_script, data):
+            script = openassets.protocol.MarkerOutput.build_script(data)
+            self.assertEquals(expected_script, bytes(script))
 
-        assert_deserialize_payload([1, 300], b'abcdef', b'OA\x01\x00' + b'\x02\x01\xac\x02' + b'\06abcdef')
+        assert_build_script(b'\x6a\00', b'')
+        assert_build_script(b'\x6a\05abcde', b'abcde')
+        assert_build_script(b'\x6a\x4c\x4c' + (b'a' * 76), b'a' * 76)
+        assert_build_script(b'\x6a\x4d\x00\x01' + (b'a' * 256), b'a' * 256)
+
+    def test_serialize_deserialize_payload_success(self):
+        def assert_deserialize_payload(asset_quantities, metadata, data):
+            # Check serialization
+            serialized_output = openassets.protocol.MarkerOutput(asset_quantities, metadata).serialize_payload()
+            self.assertEquals(data, serialized_output)
+
+            # Check deserialization
+            marker_output = openassets.protocol.MarkerOutput.deserialize_payload(data)
+            self.assertEquals(asset_quantities, marker_output.asset_quantities)
+            self.assertEquals(metadata, marker_output.metadata)
+
+        assert_deserialize_payload([5, 300], b'abcdef', b'OA\x01\x00' + b'\x02\x05\xac\x02' + b'\06abcdef')
+        # Large number of asset quantities
         assert_deserialize_payload([5] * 256, b'abcdef',
             b'OA\x01\x00' + b'\xfd\x00\x01' + (b'\x05' * 256) + b'\06abcdef')
-        assert_deserialize_payload([1], b'\x01' * 256,
-            b'OA\x01\x00' + b'\x01\x01' + b'\xfd\x00\x01' + b'\x01' * 256)
+        # Large metadata
+        assert_deserialize_payload([5], b'\x01' * 256,
+            b'OA\x01\x00' + b'\x01\x05' + b'\xfd\x00\x01' + b'\x01' * 256)
         # Biggest valid output quantity
         assert_deserialize_payload([2 ** 63 - 1], b'',
             b'OA\x01\x00' + b'\x01' + (b'\xFF' * 8) + b'\x7F' + b'\x00')
@@ -441,18 +463,18 @@ class MarkerOutputTests(unittest.TestCase):
 class TransactionOutputTests(unittest.TestCase):
     def test_init_success(self):
         target = openassets.protocol.TransactionOutput(
-            100, bitcoin.core.CScript(b'abcd'), b'efgh', 2**63 - 1, OutputType.transfer)
+            100, bitcoin.core.CScript(b'abcd'), b'efgh', 2 ** 63 - 1, OutputType.transfer)
 
         self.assertEquals(100, target.nValue)
         self.assertEquals(b'abcd', bytes(target.scriptPubKey))
         self.assertEquals(b'efgh', target.asset_address)
-        self.assertEquals(2**63 - 1, target.asset_quantity)
+        self.assertEquals(2 ** 63 - 1, target.asset_quantity)
         self.assertEquals(OutputType.transfer, target.output_type)
 
     def test_init_invalid_asset_quantity(self):
         # The asset quantity must be between 0 and 2**63 - 1
         self.assertRaises(AssertionError, openassets.protocol.TransactionOutput,
-            100, bitcoin.core.CScript(b'abcd'), b'efgh', 2**63, OutputType.transfer)
+            100, bitcoin.core.CScript(b'abcd'), b'efgh', 2 ** 63, OutputType.transfer)
         self.assertRaises(AssertionError, openassets.protocol.TransactionOutput,
             100, bitcoin.core.CScript(b'abcd'), b'efgh', -1, OutputType.transfer)
 

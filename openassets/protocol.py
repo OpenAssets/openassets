@@ -23,6 +23,8 @@
 # SOFTWARE.
 
 """
+openassets.protocol
+
 Provides the infrastructure for calculating the asset address and quantity of Bitcoin outputs,
 following the open assets protocol.
 """
@@ -287,10 +289,8 @@ class OutputCache(object):
 class MarkerOutput(object):
     """Represents an Open Assets marker output."""
 
-    MAX_ASSET_QUANTITY = 2**63 - 1
-
-    asset_quantities = property(lambda self: self._asset_quantities)
-    metadata = property(lambda self: self._metadata)
+    MAX_ASSET_QUANTITY = 2 ** 63 - 1
+    OPEN_ASSETS_TAG = b'OA\x01\x00'
 
     def __init__(self, asset_quantities, metadata):
         """
@@ -301,6 +301,26 @@ class MarkerOutput(object):
         """
         self._asset_quantities = asset_quantities
         self._metadata = metadata
+
+    @property
+    def asset_quantities(self):
+        """
+        Gets the asset quantity list.
+
+        :return: The asset quantity list of the output.
+        :rtype: list[int]
+        """
+        return self._asset_quantities
+
+    @property
+    def metadata(self):
+        """
+        Gets the metadata contained in the marker output.
+
+        :return: The metadata contained in the marker output.
+        :rtype: bytes
+        """
+        return self._metadata
 
     @classmethod
     def deserialize_payload(cls, payload):
@@ -315,7 +335,7 @@ class MarkerOutput(object):
 
             # The OAP marker and protocol version
             oa_version = stream.read(4)
-            if oa_version != b'OA\x01\x00':
+            if oa_version != cls.OPEN_ASSETS_TAG:
                 return None
 
             try:
@@ -325,7 +345,7 @@ class MarkerOutput(object):
                 # LEB128-encoded unsigned integers representing the asset quantity of every output in order
                 asset_quantities = []
                 for i in range(0, output_count):
-                    asset_quantity = MarkerOutput.leb128_decode(stream)
+                    asset_quantity = cls.leb128_decode(stream)
 
                     if asset_quantity > cls.MAX_ASSET_QUANTITY:
                         return None
@@ -351,6 +371,26 @@ class MarkerOutput(object):
                 return None
 
             return MarkerOutput(asset_quantities, metadata)
+
+    def serialize_payload(self):
+        """
+        Serializes the marker output data into a payload buffer.
+
+        :return: The serialized payload.
+        :rtype: bytes
+        """
+        with io.BytesIO() as stream:
+            stream.write(self.OPEN_ASSETS_TAG)
+
+            bitcoin.core.VarIntSerializer.stream_serialize(len(self.asset_quantities), stream)
+            for asset_quantity in self.asset_quantities:
+                stream.write(self.leb128_encode(asset_quantity))
+
+            bitcoin.core.VarIntSerializer.stream_serialize(len(self.metadata), stream)
+
+            stream.write(self.metadata)
+
+            return stream.getvalue()
 
     @classmethod
     def parse_script(cls, output_script):
@@ -379,6 +419,18 @@ class MarkerOutput(object):
             return None
 
     @classmethod
+    def build_script(cls, data):
+        """
+        Creates an output script containing an OP_RETURN and a PUSHDATA.
+
+        :param bytes data: The content of the PUSHDATA.
+        :return: The final script.
+        :rtype: CScript
+        """
+        return bitcoin.core.script.CScript(bytes([bitcoin.core.script.OP_RETURN]) + \
+            bitcoin.core.script.CScriptOp.encode_op_pushdata(data))
+
+    @classmethod
     def leb128_decode(cls, data):
         """
         Decodes a LEB128-encoded unsigned integer.
@@ -401,6 +453,28 @@ class MarkerOutput(object):
                 break
             shift += 7
         return result
+
+    @classmethod
+    def leb128_encode(cls, value):
+        """
+        Encodes an integer using LEB128.
+
+        :param int value:
+        :return: The LEB128-encoded integer.
+        :rtype: bytes
+        """
+        if value == 0:
+            return b'\x00'
+
+        result = []
+        while value != 0:
+            byte = value & 0x7f;
+            value >>= 7
+            if value != 0:
+                byte |= 0x80
+            result.append(byte)
+
+        return bytes(result)
 
     def __repr__(self):
         return "MarkerOutputPayload(asset_quantities=%r, metadata=%r)" % (self.asset_quantities, self.metadata)
