@@ -1,25 +1,30 @@
+# -*- coding: utf-8; -*-
+#
+# The MIT License (MIT)
+#
+# Copyright (c) 2014 Flavien Charlon
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
-The MIT License (MIT)
-
-Copyright (c) 2014 Flavien Charlon
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Provides the infrastructure for calculating the asset address and quantity of Bitcoin outputs,
+following the open assets protocol.
 """
 
 import bitcoin.core
@@ -198,10 +203,6 @@ class OutputType(enum.Enum):
 class TransactionOutput(bitcoin.core.CTxOut):
     """Represents a transaction output with information about the asset address and asset quantity associated to it."""
 
-    asset_address = property(lambda self: self._asset_address)
-    asset_quantity = property(lambda self: self._asset_quantity)
-    output_type = property(lambda self: self._output_type)
-
     def __init__(self,
             nValue=-1,
             scriptPubKey=bitcoin.core.script.CScript(),
@@ -223,6 +224,36 @@ class TransactionOutput(bitcoin.core.CTxOut):
         self._asset_address = asset_address
         self._asset_quantity = asset_quantity
         self._output_type = output_type
+
+    @property
+    def asset_address(self):
+        """
+        Gets the asset address of an output.
+
+        :return: The asset address of the output.
+        :rtype: bytes | None
+        """
+        return self._asset_address
+
+    @property
+    def asset_quantity(self):
+        """
+        Gets the asset quantity of an output.
+
+        :return: The asset quantity of the output.
+        :rtype: int
+        """
+        return self._asset_quantity
+
+    @property
+    def output_type(self):
+        """
+        Gets the output type of an output.
+
+        :return: The output type of the output.
+        :rtype: OutputType
+        """
+        return self._output_type
 
     def __repr__(self):
         return "TransactionOutput(nValue=%r, scriptPubKey=%r, asset_address=%r, asset_quantity=%r, output_type=%r)" % \
