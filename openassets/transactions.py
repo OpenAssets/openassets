@@ -228,7 +228,7 @@ class TransactionBuilder(object):
     @staticmethod
     def _collect_colored_outputs(unspent_outputs, from_script, asset_address, asset_quantity):
         """
-        Returns a list of uncolored outputs for the specified amount.
+        Returns a list of colored outputs for the specified quantity.
 
         :param list[SpendableOutput] unspent_outputs: The list of available outputs.
         :param bytes from_script: The source script to collect outputs from.
@@ -251,11 +251,11 @@ class TransactionBuilder(object):
 
     def _get_uncolored_output(self, script, value):
         """
-        Creates an uncolored output transferring bitcoins.
+        Creates an uncolored output.
 
         :param bytes script: The output script.
         :param int value: The satoshi value of the output.
-        :return: The transaction output object representing the uncolored output.
+        :return: An object representing the uncolored output.
         :rtype: TransactionOutput
         """
         if value < self._dust_amount:
@@ -265,10 +265,10 @@ class TransactionBuilder(object):
 
     def _get_colored_output(self, script):
         """
-        Creates an output transferring assets.
+        Creates a colored output.
 
         :param bytes script: The output script.
-        :return: The transaction output object representing the colored output.
+        :return: An object representing the colored output.
         :rtype: TransactionOutput
         """
         return bitcoin.core.CTxOut(self._dust_amount, bitcoin.core.CScript(script))
@@ -279,7 +279,7 @@ class TransactionBuilder(object):
 
         :param list[int] asset_quantities: The asset quantity list.
         :param bytes metadata: The metadata contained in the output.
-        :return: The transaction output object representing the marker output.
+        :return: An object representing the marker output.
         :rtype: TransactionOutput
         """
         payload = openassets.protocol.MarkerOutput(asset_quantities, metadata).serialize_payload()
@@ -325,16 +325,20 @@ class SpendableOutput(object):
 
 
 class TransactionBuilderError(Exception):
+    """The transaction could not be built."""
     pass
 
 
 class InsufficientFundsError(TransactionBuilderError):
+    """An insufficient amount of bitcoins is available."""
     pass
 
 
 class InsufficientAssetQuantityError(TransactionBuilderError):
+    """An insufficient amount of assets is available."""
     pass
 
 
 class DustOutputError(TransactionBuilderError):
+    """The value of an output would be too small, and the output would be considered as dust."""
     pass
