@@ -251,11 +251,11 @@ class TransactionBuilder(object):
 
     def _get_uncolored_output(self, script, value):
         """
-        Creates an output transferring uncolored coins.
+        Creates an uncolored output transferring bitcoins.
 
         :param bytes script: The output script.
-        :param int value: The satoshi value the output represents.
-        :return: The new script object.
+        :param int value: The satoshi value of the output.
+        :return: The transaction output object representing the uncolored output.
         :rtype: TransactionOutput
         """
         if value < self._dust_amount:
@@ -265,10 +265,10 @@ class TransactionBuilder(object):
 
     def _get_colored_output(self, script):
         """
-        Creates an output transferring uncolored coins.
+        Creates an output transferring assets.
 
         :param bytes script: The output script.
-        :return: The new script object.
+        :return: The transaction output object representing the colored output.
         :rtype: TransactionOutput
         """
         return bitcoin.core.CTxOut(self._dust_amount, bitcoin.core.CScript(script))
@@ -279,7 +279,7 @@ class TransactionBuilder(object):
 
         :param list[int] asset_quantities: The asset quantity list.
         :param bytes metadata: The metadata contained in the output.
-        :return: The script of the marker output.
+        :return: The transaction output object representing the marker output.
         :rtype: TransactionOutput
         """
         payload = openassets.protocol.MarkerOutput(asset_quantities, metadata).serialize_payload()
