@@ -267,12 +267,11 @@ class TransactionOutput(bitcoin.core.CTxOut):
 class OutputCache(object):
     """Represents the interface for an object capable of storing the result of output coloring."""
 
-    @staticmethod
-    def get(transaction_hash, output_index):
+    def get(self, transaction_hash, output_index):
         """
         Returns a cached output.
 
-        :param bytes transaction_hash: The hash of the transaction parent of the output.
+        :param bytes transaction_hash: The hash of the transaction the output belongs to.
         :param int output_index: The index of the output in the transaction.
         :return: The output for the transaction hash and output index provided if it is found in the cache, or None
             otherwise.
@@ -280,8 +279,7 @@ class OutputCache(object):
         """
         return None
 
-    @staticmethod
-    def put(output):
+    def put(self, output):
         """
         Saves an output in cache.
 
@@ -399,7 +397,7 @@ class MarkerOutput(object):
     @classmethod
     def parse_script(cls, output_script):
         """
-        Parses an output and returns the payload if the output matches the right pattern for an open assets
+        Parses an output and returns the payload if the output matches the right pattern for an Open Assets
         marker output, or None otherwise.
 
         :param CScript output_script: The output script to be parsed.

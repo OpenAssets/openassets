@@ -31,7 +31,7 @@ import openassets.protocol
 
 
 class TransactionBuilder(object):
-    """Provides methods for constructing open assets transactions."""
+    """Provides methods for constructing Open Assets transactions."""
 
     def __init__(self, dust_amount):
         """
@@ -275,7 +275,7 @@ class TransactionBuilder(object):
 
     def _get_marker_output(self, asset_quantities, metadata):
         """
-        Creates a marker output for open assets.
+        Creates a marker output.
 
         :param list[int] asset_quantities: The asset quantity list.
         :param bytes metadata: The metadata contained in the output.
@@ -294,8 +294,8 @@ class SpendableOutput(object):
         """
         Initializes a new instance of the TransactionOutput class.
 
-        :param COutPoint out_point: The coordinates of the output.
-        :param TransactionOutput output: The output.
+        :param COutPoint out_point: An object that can be used to locate the output.
+        :param TransactionOutput output: The actual output object.
         """
         self._out_point = out_point
         self._output = output
@@ -303,9 +303,9 @@ class SpendableOutput(object):
     @property
     def out_point(self):
         """
-        Gets the coordinates of the output.
+        Gets an object that can be used to locate the output.
 
-        :return: The coordinates of the output.
+        :return: An object that can be used to locate the output.
         :rtype: COutPoint
         """
         return self._out_point
@@ -313,9 +313,9 @@ class SpendableOutput(object):
     @property
     def output(self):
         """
-        Gets the output.
+        Gets the output object.
 
-        :return: The actual output.
+        :return: The actual output object.
         :rtype: TransactionOutput
         """
         return self._output

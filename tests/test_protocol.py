@@ -37,13 +37,12 @@ class ColoringEngineTests(unittest.TestCase):
     # get_output
 
     def test_get_output_success(self):
-
-        with unittest.mock.patch('openassets.protocol.OutputCache.get') as get_patch, \
-            unittest.mock.patch('openassets.protocol.OutputCache.put') as put_patch, \
-            unittest.mock.patch('openassets.protocol.ColoringEngine.color_transaction') as color_transaction_patch:
+        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch, \
+            unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True) as put_patch, \
+            unittest.mock.patch('openassets.protocol.ColoringEngine.color_transaction', autospec=True) as color_patch:
 
             get_patch.return_value = None
-            color_transaction_patch.return_value = self.create_test_outputs()
+            color_patch.return_value = self.create_test_outputs()
 
             def transaction_provider(transaction_hash):
                 return self.create_test_transaction(b'')
@@ -53,15 +52,14 @@ class ColoringEngineTests(unittest.TestCase):
             result = target.get_output(b'abcd', 2)
 
             self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
             self.assertEqual(3, len(put_patch.call_args_list))
-            self.assert_output(put_patch.call_args_list[0][0][0], 1, b'\x10', b'a', 6, OutputType.issuance)
-            self.assert_output(put_patch.call_args_list[1][0][0], 2, b'\x20', b'a', 2, OutputType.marker_output)
-            self.assert_output(put_patch.call_args_list[2][0][0], 3, b'\x30', b'b', 1, OutputType.transfer)
+            self.assert_output(put_patch.call_args_list[0][0][1], 1, b'\x10', b'a', 6, OutputType.issuance)
+            self.assert_output(put_patch.call_args_list[1][0][1], 2, b'\x20', b'a', 2, OutputType.marker_output)
+            self.assert_output(put_patch.call_args_list[2][0][1], 3, b'\x30', b'b', 1, OutputType.transfer)
 
     def test_get_output_not_found(self):
-
-        with unittest.mock.patch('openassets.protocol.OutputCache.get') as get_patch:
+        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch:
 
             get_patch.return_value = None
 
@@ -72,11 +70,10 @@ class ColoringEngineTests(unittest.TestCase):
 
             self.assertRaises(ValueError, target.get_output, b'abcd', 2)
 
-            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
 
     def test_get_output_cached(self):
-
-        with unittest.mock.patch('openassets.protocol.OutputCache.get') as get_patch:
+        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch:
 
             get_patch.return_value = self.create_test_outputs()[2]
 
@@ -85,7 +82,7 @@ class ColoringEngineTests(unittest.TestCase):
             result = target.get_output(b'abcd', 2)
 
             self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEqual(get_patch.call_args_list[0][0], (b'abcd', 2))
+            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
 
     # color_transaction
 
@@ -93,7 +90,9 @@ class ColoringEngineTests(unittest.TestCase):
         target = openassets.protocol.ColoringEngine(None, None)
 
         def color_transaction(marker_output):
-            with unittest.mock.patch('openassets.protocol.ColoringEngine.get_output') as get_output_patch:
+            with unittest.mock.patch(
+                'openassets.protocol.ColoringEngine.get_output', autospec=True) as get_output_patch:
+
                 get_output_patch.side_effect = self.create_test_outputs()
                 return target.color_transaction(self.create_test_transaction(marker_output))
 
