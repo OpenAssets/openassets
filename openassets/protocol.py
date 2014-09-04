@@ -184,7 +184,7 @@ class ColoringEngine(object):
     @staticmethod
     def hash_script(data):
         """
-        Hash a script into a pay-to-script-hash address using SHA256 followed by RIPEMD160.
+        Hashes a script into a pay-to-script-hash address using SHA256 followed by RIPEMD160.
 
         :param bytes data: The data to hash.
         """
@@ -298,7 +298,7 @@ class MarkerOutput(object):
 
     def __init__(self, asset_quantities, metadata):
         """
-        Initializes a new instance of the MarkerOutputPayload class.
+        Initializes a new instance of the MarkerOutput class.
 
         :param list[int] asset_quantities: The list of asset quantities.
         :param bytes metadata: The metadata in the marker output.
@@ -481,4 +481,4 @@ class MarkerOutput(object):
         return bytes(result)
 
     def __repr__(self):
-        return 'MarkerOutputPayload(asset_quantities=%r, metadata=%r)' % (self.asset_quantities, self.metadata)
+        return 'MarkerOutput(asset_quantities=%r, metadata=%r)' % (self.asset_quantities, self.metadata)

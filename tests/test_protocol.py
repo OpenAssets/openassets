@@ -458,6 +458,10 @@ class MarkerOutputTests(unittest.TestCase):
         # Asset quantity too large
         assert_deserialize_payload(b'OA\x01\x00' + b'\x01' + (b'\x80' * 9) + b'\01' + b'\x00')
 
+    def test_repr(self):
+        target = openassets.protocol.MarkerOutput([5, 100, 0], b'abcd')
+        self.assertEqual('MarkerOutput(asset_quantities=[5, 100, 0], metadata=b\'abcd\')', str(target))
+
 
 class TransactionOutputTests(unittest.TestCase):
     def test_init_success(self):
@@ -477,4 +481,14 @@ class TransactionOutputTests(unittest.TestCase):
         self.assertRaises(AssertionError, openassets.protocol.TransactionOutput,
             100, bitcoin.core.CScript(b'abcd'), b'efgh', -1, OutputType.transfer)
 
+    def test_repr(self):
+        target = openassets.protocol.TransactionOutput(
+            100, bitcoin.core.CScript(b'abcd'), b'efgh', 1500, OutputType.transfer)
 
+        self.assertEqual('TransactionOutput(' +
+            'nValue=100, ' +
+            'scriptPubKey=CScript([OP_NOP, OP_VER, OP_IF, OP_NOTIF]), ' +
+            'asset_address=b\'efgh\', ' +
+            'asset_quantity=1500, ' +
+            'output_type=<OutputType.transfer: 3>)',
+            str(target))

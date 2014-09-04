@@ -320,9 +320,6 @@ class SpendableOutput(object):
         """
         return self._output
 
-    def __repr__(self):
-        return 'SpendableOutput(out_point=%r, output=%r)' % (self.out_point, self.output)
-
 
 class TransactionBuilderError(Exception):
     """The transaction could not be built."""
