@@ -181,8 +181,8 @@ class ColoringEngine(object):
 
         return result
 
-    @classmethod
-    def hash_script(cls, data):
+    @staticmethod
+    def hash_script(data):
         """
         Hash a script into a pay-to-script-hash address using SHA256 followed by RIPEMD160.
 
@@ -232,9 +232,9 @@ class TransactionOutput(bitcoin.core.CTxOut):
     @property
     def asset_address(self):
         """
-        Gets the asset address of an output.
+        Gets the asset address of the output.
 
-        :return: The asset address of the output.
+        :return: The asset address of the output, or None of the output is uncolored.
         :rtype: bytes | None
         """
         return self._asset_address
@@ -242,9 +242,9 @@ class TransactionOutput(bitcoin.core.CTxOut):
     @property
     def asset_quantity(self):
         """
-        Gets the asset quantity of an output.
+        Gets the asset quantity of the output.
 
-        :return: The asset quantity of the output.
+        :return: The asset quantity of the output (zero if the output is uncolored).
         :rtype: int
         """
         return self._asset_quantity
@@ -252,9 +252,9 @@ class TransactionOutput(bitcoin.core.CTxOut):
     @property
     def output_type(self):
         """
-        Gets the output type of an output.
+        Gets the type of the output.
 
-        :return: The output type of the output.
+        :return: The type of the output.
         :rtype: OutputType
         """
         return self._output_type
@@ -439,8 +439,8 @@ class MarkerOutput(object):
         """
         Decodes a LEB128-encoded unsigned integer.
 
-        :param BytesIO data:
-        :return: The integer represented in LEB128.
+        :param BufferedIOBase data: The buffer containing the LEB128-encoded integer to decode.
+        :return: The decoded integer.
         :rtype: int
         """
         result = 0
@@ -463,7 +463,7 @@ class MarkerOutput(object):
         """
         Encodes an integer using LEB128.
 
-        :param int value:
+        :param int value: The value to encode.
         :return: The LEB128-encoded integer.
         :rtype: bytes
         """
