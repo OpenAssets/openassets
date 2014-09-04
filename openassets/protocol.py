@@ -68,8 +68,8 @@ class ColoringEngine(object):
 
         colored_outputs = self.color_transaction(transaction)
 
-        for output in colored_outputs:
-            self._cache.put(output)
+        for index, output in enumerate(colored_outputs):
+            self._cache.put(transaction_hash, index, output)
 
         return colored_outputs[output_index]
 
@@ -279,10 +279,12 @@ class OutputCache(object):
         """
         return None
 
-    def put(self, output):
+    def put(self, transaction_hash, output_index, output):
         """
         Saves an output in cache.
 
+        :param bytes transaction_hash: The hash of the transaction the output belongs to.
+        :param int output_index: The index of the output in the transaction.
         :param TransactionOutput output: The output to save.
         """
         pass
@@ -394,8 +396,8 @@ class MarkerOutput(object):
 
             return stream.getvalue()
 
-    @classmethod
-    def parse_script(cls, output_script):
+    @staticmethod
+    def parse_script(output_script):
         """
         Parses an output and returns the payload if the output matches the right pattern for an Open Assets
         marker output, or None otherwise.
@@ -420,8 +422,8 @@ class MarkerOutput(object):
         else:
             return None
 
-    @classmethod
-    def build_script(cls, data):
+    @staticmethod
+    def build_script(data):
         """
         Creates an output script containing an OP_RETURN and a PUSHDATA.
 
@@ -432,8 +434,8 @@ class MarkerOutput(object):
         return bitcoin.core.script.CScript(
             bytes([bitcoin.core.script.OP_RETURN]) + bitcoin.core.script.CScriptOp.encode_op_pushdata(data))
 
-    @classmethod
-    def leb128_decode(cls, data):
+    @staticmethod
+    def leb128_decode(data):
         """
         Decodes a LEB128-encoded unsigned integer.
 
@@ -456,8 +458,8 @@ class MarkerOutput(object):
             shift += 7
         return result
 
-    @classmethod
-    def leb128_encode(cls, value):
+    @staticmethod
+    def leb128_encode(value):
         """
         Encodes an integer using LEB128.
 

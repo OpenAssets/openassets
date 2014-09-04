@@ -54,9 +54,12 @@ class ColoringEngineTests(unittest.TestCase):
             self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
             self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
             self.assertEqual(3, len(put_patch.call_args_list))
-            self.assert_output(put_patch.call_args_list[0][0][1], 1, b'\x10', b'a', 6, OutputType.issuance)
-            self.assert_output(put_patch.call_args_list[1][0][1], 2, b'\x20', b'a', 2, OutputType.marker_output)
-            self.assert_output(put_patch.call_args_list[2][0][1], 3, b'\x30', b'b', 1, OutputType.transfer)
+            self.assertEqual(put_patch.call_args_list[0][0][1:3], (b'abcd', 0))
+            self.assert_output(put_patch.call_args_list[0][0][3], 1, b'\x10', b'a', 6, OutputType.issuance)
+            self.assertEqual(put_patch.call_args_list[1][0][1:3], (b'abcd', 1))
+            self.assert_output(put_patch.call_args_list[1][0][3], 2, b'\x20', b'a', 2, OutputType.marker_output)
+            self.assertEqual(put_patch.call_args_list[2][0][1:3], (b'abcd', 2))
+            self.assert_output(put_patch.call_args_list[2][0][3], 3, b'\x30', b'b', 1, OutputType.transfer)
 
     def test_get_output_not_found(self):
         with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch:
