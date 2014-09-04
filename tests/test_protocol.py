@@ -36,68 +36,65 @@ class ColoringEngineTests(unittest.TestCase):
 
     # get_output
 
-    def test_get_output_success(self):
-        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch, \
-            unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True) as put_patch, \
-            unittest.mock.patch('openassets.protocol.ColoringEngine.color_transaction', autospec=True) as color_patch:
+    @unittest.mock.patch('openassets.protocol.ColoringEngine.color_transaction', autospec=True)
+    @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
+    @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
+    def test_get_output_success(self, put_mock, get_mock, color_transaction_mock):
+        get_mock.return_value = None
+        color_transaction_mock.return_value = self.create_test_outputs()
 
-            get_patch.return_value = None
-            color_patch.return_value = self.create_test_outputs()
+        def transaction_provider(transaction_hash):
+            return self.create_test_transaction(b'')
 
-            def transaction_provider(transaction_hash):
-                return self.create_test_transaction(b'')
+        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache())
 
-            target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache())
+        result = target.get_output(b'abcd', 2)
 
-            result = target.get_output(b'abcd', 2)
+        self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
+        self.assertEqual(get_mock.call_args_list[0][0][1:], (b'abcd', 2))
+        self.assertEqual(3, len(put_mock.call_args_list))
+        self.assertEqual(put_mock.call_args_list[0][0][1:3], (b'abcd', 0))
+        self.assert_output(put_mock.call_args_list[0][0][3], 1, b'\x10', b'a', 6, OutputType.issuance)
+        self.assertEqual(put_mock.call_args_list[1][0][1:3], (b'abcd', 1))
+        self.assert_output(put_mock.call_args_list[1][0][3], 2, b'\x20', b'a', 2, OutputType.marker_output)
+        self.assertEqual(put_mock.call_args_list[2][0][1:3], (b'abcd', 2))
+        self.assert_output(put_mock.call_args_list[2][0][3], 3, b'\x30', b'b', 1, OutputType.transfer)
 
-            self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
-            self.assertEqual(3, len(put_patch.call_args_list))
-            self.assertEqual(put_patch.call_args_list[0][0][1:3], (b'abcd', 0))
-            self.assert_output(put_patch.call_args_list[0][0][3], 1, b'\x10', b'a', 6, OutputType.issuance)
-            self.assertEqual(put_patch.call_args_list[1][0][1:3], (b'abcd', 1))
-            self.assert_output(put_patch.call_args_list[1][0][3], 2, b'\x20', b'a', 2, OutputType.marker_output)
-            self.assertEqual(put_patch.call_args_list[2][0][1:3], (b'abcd', 2))
-            self.assert_output(put_patch.call_args_list[2][0][3], 3, b'\x30', b'b', 1, OutputType.transfer)
+    @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
+    @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
+    def test_get_output_not_found(self, put_mock, get_mock):
+        get_mock.return_value = None
 
-    def test_get_output_not_found(self):
-        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch:
+        def transaction_provider(transaction_hash):
+            return None
 
-            get_patch.return_value = None
+        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache())
 
-            def transaction_provider(transaction_hash):
-                return None
+        self.assertRaises(ValueError, target.get_output, b'abcd', 2)
 
-            target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache())
+        self.assertEqual(get_mock.call_args_list[0][0][1:], (b'abcd', 2))
 
-            self.assertRaises(ValueError, target.get_output, b'abcd', 2)
+    @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
+    @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
+    def test_get_output_cached(self, put_mock, get_mock):
+        get_mock.return_value = self.create_test_outputs()[2]
 
-            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
+        target = openassets.protocol.ColoringEngine(None, openassets.protocol.OutputCache())
 
-    def test_get_output_cached(self):
-        with unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True) as get_patch:
+        result = target.get_output(b'abcd', 2)
 
-            get_patch.return_value = self.create_test_outputs()[2]
-
-            target = openassets.protocol.ColoringEngine(None, openassets.protocol.OutputCache())
-
-            result = target.get_output(b'abcd', 2)
-
-            self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
-            self.assertEqual(get_patch.call_args_list[0][0][1:], (b'abcd', 2))
+        self.assert_output(result, 3, b'\x30', b'b', 1, OutputType.transfer)
+        self.assertEqual(get_mock.call_args_list[0][0][1:], (b'abcd', 2))
 
     # color_transaction
 
     def test_color_transaction_success(self):
         target = openassets.protocol.ColoringEngine(None, None)
 
-        def color_transaction(marker_output):
-            with unittest.mock.patch(
-                'openassets.protocol.ColoringEngine.get_output', autospec=True) as get_output_patch:
-
-                get_output_patch.side_effect = self.create_test_outputs()
-                return target.color_transaction(self.create_test_transaction(marker_output))
+        @unittest.mock.patch('openassets.protocol.ColoringEngine.get_output', autospec=True)
+        def color_transaction(marker_output, get_output_mock):
+            get_output_mock.side_effect = self.create_test_outputs()
+            return target.color_transaction(self.create_test_transaction(marker_output))
 
         # Valid transaction
         outputs = color_transaction(b'\x6a\x08' + b'OA\x01\x00' + b'\x02\x05\x07' + b'\00')

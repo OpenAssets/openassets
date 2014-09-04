@@ -329,7 +329,7 @@ class MarkerOutput(object):
     @classmethod
     def deserialize_payload(cls, payload):
         """
-        Deserializes the Open Assets marker output payload.
+        Deserializes the marker output payload.
 
         :param bytes payload: A buffer containing the marker output payload.
         :return: The marker output object.
@@ -399,8 +399,8 @@ class MarkerOutput(object):
     @staticmethod
     def parse_script(output_script):
         """
-        Parses an output and returns the payload if the output matches the right pattern for an Open Assets
-        marker output, or None otherwise.
+        Parses an output and returns the payload if the output matches the right pattern for a marker output,
+        or None otherwise.
 
         :param CScript output_script: The output script to be parsed.
         :return: The marker output payload if the output fits the pattern, None otherwise.
