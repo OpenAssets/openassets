@@ -112,7 +112,7 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[1], 20, b'\x6a\x04' + b'OA\x01\x00', None, 0, OutputType.uncolored)
         self.assert_output(outputs[2], 30, b'\x20', None, 0, OutputType.uncolored)
 
-        # Invalid coloring (more asset quantities than outputs)
+        # Invalid coloring (the asset quantity count is larger than the number of items in the asset quantity list)
         outputs = color_transaction(b'\x6a\x08' + b'OA\x01\x00' + b'\x03\x05\x09\x08' + b'\00')
 
         self.assert_output(outputs[0], 10, b'\x10', None, 0, OutputType.uncolored)
@@ -123,6 +123,7 @@ class ColoringEngineTests(unittest.TestCase):
     # compute_asset_addresses
 
     def test_compute_asset_addresses_issuance(self):
+        # Issue an asset
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
@@ -193,7 +194,7 @@ class ColoringEngineTests(unittest.TestCase):
                 {'asset_address': None, 'asset_quantity': 0}
             ],
             asset_quantities=[2],
-            output_count=3
+            output_count=2
         )
         self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.marker_output)
         self.assert_output(outputs[1], 1, b'1', b'a', 2, OutputType.transfer)
@@ -232,7 +233,7 @@ class ColoringEngineTests(unittest.TestCase):
         )
         self.assertIsNone(outputs)
 
-        # Multiple inputs and outputs - Matching values
+        # Multiple inputs and outputs - Matching asset quantities
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': b'a', 'asset_quantity': 1},
@@ -247,7 +248,7 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[2], 2, b'2', b'b', 2, OutputType.transfer)
         self.assert_output(outputs[3], 3, b'3', b'c', 3, OutputType.transfer)
 
-        # Multiple inputs and outputs - Mixing same color
+        # Multiple inputs and outputs - Mixing same asset
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': b'a', 'asset_quantity': 2},
@@ -262,7 +263,7 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[2], 2, b'2', b'a', 3, OutputType.transfer)
         self.assert_output(outputs[3], 3, b'3', b'a', 1, OutputType.transfer)
 
-        # Multiple inputs and outputs - Mixing different colors
+        # Multiple inputs and outputs - Mixing different assets
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': b'a', 'asset_quantity': 2},
@@ -275,6 +276,7 @@ class ColoringEngineTests(unittest.TestCase):
         self.assertIsNone(outputs)
 
     def test_compute_asset_addresses_issuance_transfer(self):
+        # Transaction mixing both issuance and transfer
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': b'a', 'asset_quantity': 3, 'output_script': b'abcdef'},
