@@ -26,4 +26,4 @@
 Reference implementation of the Open Assets Protocol.
 """
 
-__version__ = "1.0"
+__version__ = '1.0'
