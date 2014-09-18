@@ -190,7 +190,9 @@ class ColoringEngineTests(unittest.TestCase):
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': None, 'asset_quantity': 0},
-                {'asset_address': b'a', 'asset_quantity': 2},
+                {'asset_address': b'a', 'asset_quantity': 1},
+                {'asset_address': None, 'asset_quantity': 0},
+                {'asset_address': b'a', 'asset_quantity': 1},
                 {'asset_address': None, 'asset_quantity': 0}
             ],
             asset_quantities=[2],
