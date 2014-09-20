@@ -150,7 +150,7 @@ class ColoringEngineTests(unittest.TestCase):
         )
         self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.marker_output)
 
-        # More asset quantities than outputs
+        # More asset quantity values than outputs
         outputs = self.color_outputs(
             inputs=[
                 {'asset_address': b'a', 'asset_quantity': 2}
@@ -201,18 +201,31 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.marker_output)
         self.assert_output(outputs[1], 1, b'1', b'a', 2, OutputType.transfer)
 
-        # Outputs less than inputs
+        # Input partially unassigned
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 3},
-                {'asset_address': b'a', 'asset_quantity': 1}
+                {'asset_address': b'a', 'asset_quantity': 1},
+                {'asset_address': b'a', 'asset_quantity': 3}
             ],
-            asset_quantities=[1, 1],
+            asset_quantities=[1, 2],
             output_count=3
         )
         self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.marker_output)
         self.assert_output(outputs[1], 1, b'1', b'a', 1, OutputType.transfer)
-        self.assert_output(outputs[2], 2, b'2', b'a', 1, OutputType.transfer)
+        self.assert_output(outputs[2], 2, b'2', b'a', 2, OutputType.transfer)
+
+        # Entire input unassigned
+        outputs = self.color_outputs(
+            inputs=[
+                {'asset_address': b'a', 'asset_quantity': 1},
+                {'asset_address': b'a', 'asset_quantity': 3}
+            ],
+            asset_quantities=[1],
+            output_count=3
+        )
+        self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.marker_output)
+        self.assert_output(outputs[1], 1, b'1', b'a', 1, OutputType.transfer)
+        self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.transfer)
 
         # Output partially unassigned
         outputs = self.color_outputs(
