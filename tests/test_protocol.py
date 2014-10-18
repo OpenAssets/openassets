@@ -120,6 +120,59 @@ class ColoringEngineTests(unittest.TestCase):
             None, 0, OutputType.uncolored)
         self.assert_output(outputs[2], 30, b'\x20', None, 0, OutputType.uncolored)
 
+    def test_color_transaction_invalid_marker_outputs(self):
+        target = openassets.protocol.ColoringEngine(None, None)
+
+        @unittest.mock.patch('openassets.protocol.ColoringEngine.get_output', autospec=True)
+        def color_transaction(transaction, get_output_mock):
+            get_output_mock.side_effect = self.create_test_outputs() * 6
+            return target.color_transaction(transaction)
+
+        transaction = bitcoin.core.CTransaction(
+            [
+                bitcoin.core.CTxIn(bitcoin.core.COutPoint(b'\x01' * 32, 1)),
+                bitcoin.core.CTxIn(bitcoin.core.COutPoint(b'\x02' * 32, 2)),
+                bitcoin.core.CTxIn(bitcoin.core.COutPoint(b'\x03' * 32, 3))
+            ],
+            [
+                # If the LEB128-encoded asset quantity of any output exceeds 9 bytes,
+                # the marker output is deemed invalid
+                bitcoin.core.CTxOut(10, bitcoin.core.CScript(
+                    b'\x6a\x10' + b'OA\x01\x00' + b'\x01' + b'\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02' + b'\x00')),
+                # If the marker output is malformed, it is considered invalid.
+                bitcoin.core.CTxOut(20, bitcoin.core.CScript(
+                    b'\x6a\x07' + b'OA\x01\x00' + b'\x01' + b'\x04' + b'\x02')),
+                # If there are more items in the asset quantity list than the number of colorable outputs,
+                # the marker output is deemed invalid
+                bitcoin.core.CTxOut(30, bitcoin.core.CScript(
+                    b'\x6a\x0D' + b'OA\x01\x00' + b'\x07' + b'\x01\x01\x01\x01\x01\x01\x01' + b'\x00')),
+                # If there are less asset units in the input sequence than in the output sequence,
+                # the marker output is considered invalid.
+                bitcoin.core.CTxOut(40, bitcoin.core.CScript(
+                    b'\x6a\x0B' + b'OA\x01\x00' + b'\x05' + b'\x00\x00\x00\x08\x02' + b'\x00')),
+                # If any output contains units from more than one distinct asset address,
+                # the marker output is considered invalid
+                bitcoin.core.CTxOut(50, bitcoin.core.CScript(
+                    b'\x6a\x0B' + b'OA\x01\x00' + b'\x05' + b'\x00\x00\x00\x00\x09' + b'\x00')),
+                # Valid marker output
+                bitcoin.core.CTxOut(60, bitcoin.core.CScript(
+                    b'\x6a\x0C' + b'OA\x01\x00' + b'\x06' + b'\x01\x01\x01\x01\x01\x08' + b'\x00')),
+                bitcoin.core.CTxOut(70, bitcoin.core.CScript(b'\x20'))
+            ]
+        )
+
+        outputs = color_transaction(transaction)
+
+        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'\x10')
+        vout = transaction.vout
+        self.assert_output(outputs[0], 10, vout[0].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[1], 20, vout[1].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[2], 30, vout[2].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[3], 40, vout[3].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[4], 50, vout[4].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[5], 60, vout[5].scriptPubKey, None, 0, OutputType.marker_output)
+        self.assert_output(outputs[6], 70, vout[6].scriptPubKey, b'a', 8, OutputType.transfer)
+
     # compute_asset_addresses
 
     def test_compute_asset_addresses_issuance(self):

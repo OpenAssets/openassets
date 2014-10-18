@@ -120,7 +120,7 @@ class ColoringEngine(object):
         :rtype: list[TransactionOutput]
         """
         # If there are more items in the asset quantities list than outputs in the transaction (excluding the
-        # marker output), the transaction is considered invalid
+        # marker output), the marker output is deemed invalid
         if len(asset_quantities) > len(outputs) - 1:
             return None
 
@@ -157,7 +157,7 @@ class ColoringEngine(object):
                     current_input = next(input_iterator, None)
                     if current_input is None:
                         # There are less asset units available in the input than in the outputs:
-                        # the transaction is considered invalid
+                        # the marker output is considered invalid
                         return None
                     else:
                         input_units_left = current_input.asset_quantity
@@ -173,7 +173,7 @@ class ColoringEngine(object):
                         asset_address = current_input.asset_address
                     elif asset_address != current_input.asset_address:
                         # Another different asset address has already been assigned to that output:
-                        # the transaction is considered invalid
+                        # the marker output is considered invalid
                         return None
 
             result.append(TransactionOutput(
@@ -351,6 +351,8 @@ class MarkerOutput(object):
                 for i in range(0, output_count):
                     asset_quantity = cls.leb128_decode(stream)
 
+                    # If the LEB128-encoded asset quantity of any output exceeds 9 bytes,
+                    # the marker output is deemed invalid
                     if asset_quantity > cls.MAX_ASSET_QUANTITY:
                         return None
 
