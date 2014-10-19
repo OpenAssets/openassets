@@ -27,6 +27,7 @@ Provides the infrastructure for calculating the asset address and quantity of Bi
 according to the Open Assets Protocol.
 """
 
+import asyncio
 import bitcoin.core
 import bitcoin.core.script
 import enum
@@ -37,16 +38,19 @@ import io
 class ColoringEngine(object):
     """The backtracking engine used to find the asset address and asset quantity of any output."""
 
-    def __init__(self, transaction_provider, cache):
+    def __init__(self, transaction_provider, cache, event_loop):
         """
         Constructs an instance of the ColorEngine class.
 
         :param bytes -> CTransaction transaction_provider: A function returning a transaction given its hash.
         :param OutputCache cache: The cache object to use.
+        :param BaseEventLoop | None event_loop: The event loop used to schedule asynchronous tasks.
         """
         self._transaction_provider = transaction_provider
         self._cache = cache
+        self._loop = event_loop
 
+    @asyncio.coroutine
     def get_output(self, transaction_hash, output_index):
         """
         Gets an output and information about its asset address and quantity.
@@ -66,13 +70,14 @@ class ColoringEngine(object):
         if transaction is None:
             raise ValueError('Transaction {0} could not be retrieved'.format(bitcoin.core.b2lx(transaction_hash)))
 
-        colored_outputs = self.color_transaction(transaction)
+        colored_outputs = yield from self.color_transaction(transaction)
 
         for index, output in enumerate(colored_outputs):
             self._cache.put(transaction_hash, index, output)
 
         return colored_outputs[output_index]
 
+    @asyncio.coroutine
     def color_transaction(self, transaction):
         """
         Computes the asset address and quantity of every output in the transaction.
@@ -91,7 +96,11 @@ class ColoringEngine(object):
 
                 if marker_output is not None:
                     # Fetch the colored outputs for previous transactions
-                    inputs = [self.get_output(item.prevout.hash, item.prevout.n) for item in transaction.vin]
+                    input_futures = [
+                        asyncio.async(self.get_output(item.prevout.hash, item.prevout.n), loop=self._loop)
+                        for item in transaction.vin]
+
+                    inputs = yield from asyncio.gather(*input_futures, loop=self._loop)
 
                     asset_addresses = self._compute_asset_addresses(
                         inputs,
