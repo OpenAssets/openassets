@@ -39,9 +39,9 @@ class TestHelpers(object):
     def async_test(function):
         def wrapper(*args, **kwargs):
             coroutine = asyncio.coroutine(function)
-            future = coroutine(*args, **kwargs)
             loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            kwargs['loop'] = loop
+            future = coroutine(*args, **kwargs)
             loop.run_until_complete(future)
             loop.close()
         return wrapper
@@ -55,14 +55,14 @@ class ColoringEngineTests(unittest.TestCase):
     @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
     @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
     @TestHelpers.async_test
-    def test_get_output_success(self, put_mock, get_mock, color_transaction_mock):
+    def test_get_output_success(self, put_mock, get_mock, color_transaction_mock, loop):
         get_mock.return_value = None
-        color_transaction_mock.return_value = self.as_future(self.create_test_outputs())
+        color_transaction_mock.return_value = self.as_future(self.create_test_outputs(), loop)
 
         def transaction_provider(transaction_hash):
             return self.create_test_transaction(b'')
 
-        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), None)
+        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
 
         result = yield from target.get_output(b'abcd', 2)
 
@@ -79,13 +79,13 @@ class ColoringEngineTests(unittest.TestCase):
     @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
     @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
     @TestHelpers.async_test
-    def test_get_output_not_found(self, put_mock, get_mock):
+    def test_get_output_not_found(self, put_mock, get_mock, loop):
         get_mock.return_value = None
 
         def transaction_provider(transaction_hash):
             return None
 
-        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), None)
+        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
 
         try:
             yield from target.get_output(b'abcd', 2)
@@ -99,10 +99,10 @@ class ColoringEngineTests(unittest.TestCase):
     @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
     @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
     @TestHelpers.async_test
-    def test_get_output_cached(self, put_mock, get_mock):
+    def test_get_output_cached(self, put_mock, get_mock, loop):
         get_mock.return_value = self.create_test_outputs()[2]
 
-        target = openassets.protocol.ColoringEngine(None, openassets.protocol.OutputCache(), None)
+        target = openassets.protocol.ColoringEngine(None, openassets.protocol.OutputCache(), loop)
 
         result = yield from target.get_output(b'abcd', 2)
 
@@ -112,7 +112,7 @@ class ColoringEngineTests(unittest.TestCase):
     @unittest.mock.patch('openassets.protocol.OutputCache.get', autospec=True)
     @unittest.mock.patch('openassets.protocol.OutputCache.put', autospec=True)
     @TestHelpers.async_test
-    def test_get_output_deep_chain(self, put_mock, get_mock):
+    def test_get_output_deep_chain(self, put_mock, get_mock, loop):
         get_mock.return_value = None
 
         depth_counter = [1000]
@@ -144,7 +144,7 @@ class ColoringEngineTests(unittest.TestCase):
                         bitcoin.core.CTxOut(40, bitcoin.core.CScript(b'\x40')),
                     ])
 
-        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), None)
+        target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
 
         result = yield from target.get_output(b'\x01', 1)
 
@@ -155,10 +155,10 @@ class ColoringEngineTests(unittest.TestCase):
 
     @unittest.mock.patch('openassets.protocol.ColoringEngine.get_output', autospec=True)
     @TestHelpers.async_test
-    def test_color_transaction_success(self, get_output_mock):
-        get_output_mock.side_effect = lambda _, __, index: self.as_future(self.create_test_outputs()[index - 1])
+    def test_color_transaction_success(self, get_output_mock, loop):
+        get_output_mock.side_effect = lambda _, __, index: self.as_future(self.create_test_outputs()[index - 1], loop)
 
-        target = openassets.protocol.ColoringEngine(None, None, None)
+        target = openassets.protocol.ColoringEngine(None, None, loop)
 
         # Valid transaction
         outputs = yield from target.color_transaction(self.create_test_transaction(
@@ -189,10 +189,10 @@ class ColoringEngineTests(unittest.TestCase):
 
     @unittest.mock.patch('openassets.protocol.ColoringEngine.get_output', autospec=True)
     @TestHelpers.async_test
-    def test_color_transaction_invalid_marker_outputs(self, get_output_mock):
-        get_output_mock.side_effect = lambda _, __, index: self.as_future(self.create_test_outputs()[index - 1])
+    def test_color_transaction_invalid_marker_outputs(self, get_output_mock, loop):
+        get_output_mock.side_effect = lambda _, __, index: self.as_future(self.create_test_outputs()[index - 1], loop)
 
-        target = openassets.protocol.ColoringEngine(None, None, None)
+        target = openassets.protocol.ColoringEngine(None, None, loop)
 
         transaction = bitcoin.core.CTransaction(
             [
@@ -485,8 +485,8 @@ class ColoringEngineTests(unittest.TestCase):
         ]
 
     @staticmethod
-    def as_future(result):
-        future = asyncio.Future()
+    def as_future(result, loop):
+        future = asyncio.Future(loop=loop)
         future.set_result(result)
         return future
 
