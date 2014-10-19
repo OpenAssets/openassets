@@ -42,7 +42,7 @@ class ColoringEngine(object):
         """
         Constructs an instance of the ColorEngine class.
 
-        :param bytes -> CTransaction transaction_provider: A function returning a transaction given its hash.
+        :param bytes -> Future[CTransaction] transaction_provider: A function returning a transaction given its hash.
         :param OutputCache cache: The cache object to use.
         :param BaseEventLoop | None event_loop: The event loop used to schedule asynchronous tasks.
         """
@@ -60,12 +60,12 @@ class ColoringEngine(object):
         :return: An object containing the output and the asset address and quantity.
         :rtype: TransactionOutput
         """
-        cached_output = self._cache.get(transaction_hash, output_index)
+        cached_output = yield from self._cache.get(transaction_hash, output_index)
 
         if cached_output is not None:
             return cached_output
 
-        transaction = self._transaction_provider(transaction_hash)
+        transaction = yield from self._transaction_provider(transaction_hash)
 
         if transaction is None:
             raise ValueError('Transaction {0} could not be retrieved'.format(bitcoin.core.b2lx(transaction_hash)))
@@ -73,7 +73,7 @@ class ColoringEngine(object):
         colored_outputs = yield from self.color_transaction(transaction)
 
         for index, output in enumerate(colored_outputs):
-            self._cache.put(transaction_hash, index, output)
+            yield from self._cache.put(transaction_hash, index, output)
 
         return colored_outputs[output_index]
 
@@ -276,6 +276,7 @@ class TransactionOutput(bitcoin.core.CTxOut):
 class OutputCache(object):
     """Represents the interface for an object capable of storing the result of output coloring."""
 
+    @asyncio.coroutine
     def get(self, transaction_hash, output_index):
         """
         Returns a cached output.
@@ -288,6 +289,7 @@ class OutputCache(object):
         """
         return None
 
+    @asyncio.coroutine
     def put(self, transaction_hash, output_index, output):
         """
         Saves an output in cache.
