@@ -58,7 +58,7 @@ class ColoringEngine(object):
         :param bytes transaction_hash: The hash of the transaction containing the output.
         :param int output_index: The index of the output.
         :return: An object containing the output and the asset address and quantity.
-        :rtype: TransactionOutput
+        :rtype: Future[TransactionOutput]
         """
         cached_output = yield from self._cache.get(transaction_hash, output_index)
 
@@ -84,7 +84,7 @@ class ColoringEngine(object):
 
         :param CTransaction transaction: The transaction to color.
         :return: A list containing all the colored outputs of the transaction.
-        :rtype: list[TransactionOutput]
+        :rtype: Future[list[TransactionOutput]]
         """
         for i, output in enumerate(transaction.vout):
             # Parse the OP_RETURN script

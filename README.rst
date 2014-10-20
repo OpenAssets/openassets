@@ -10,7 +10,7 @@ Requirements
 
 The following items are required for using the ``openassets`` package:
 
-* Python 3
+* Python 3.4
 * The `python-bitcoinlib <https://github.com/petertodd/python-bitcoinlib>`_ package
 
 Installation
@@ -30,7 +30,7 @@ Or manually from source, assuming all required modules are installed on your sys
 Windows
 -------
 
-1) Make sure you have `Python 3 and pip <http://www.anthonydebarros.com/2011/10/15/setting-up-python-in-windows-7/>`_ installed
+1) Make sure you have `Python 3.4 and pip <http://www.anthonydebarros.com/2011/10/15/setting-up-python-in-windows-7/>`_ installed
 2) Open the command prompt: Start Menu > Accessories > Command Prompt
 3) Run the following command::
 
@@ -51,6 +51,7 @@ Usage
 
 This example requires a Bitcoin Core instance running with RPC enabled and the ``-txindex=1`` parameter::
 
+    import asyncio
     import bitcoin.rpc
     import openassets.protocol
 
@@ -59,7 +60,7 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
     # OutputCache implements the interface required for an output cache provider, but does not perform any caching
     cache = openassets.protocol.OutputCache()
     # Instantiate the coloring engine
-    coloring_engine = openassets.protocol.ColoringEngine(rpc_client.getrawtransaction, cache)
+    coloring_engine = openassets.protocol.ColoringEngine(asyncio.coroutine(rpc_client.getrawtransaction), cache)
 
     transaction_hash = bitcoin.core.lx('864cbcb4b5e083a98aaeaf94443815025bdfb0d35a6fd00817034018b6752ff5')
     output_index = 1
