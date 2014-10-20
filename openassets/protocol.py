@@ -137,7 +137,7 @@ class ColoringEngine(object):
         result = []
 
         # Add the issuance outputs
-        issuance_address = cls.hash_script(bytes(inputs[0].scriptPubKey))
+        issuance_address = cls.hash_script(bytes(inputs[0].script))
 
         for i in range(0, marker_output_index):
             result.append(TransactionOutput(
@@ -213,31 +213,52 @@ class OutputType(enum.Enum):
     transfer = 3
 
 
-class TransactionOutput(bitcoin.core.CTxOut):
+class TransactionOutput(object):
     """Represents a transaction output with information about the asset address and asset quantity associated to it."""
 
     def __init__(
             self,
-            nValue=-1,
-            scriptPubKey=bitcoin.core.script.CScript(),
+            value=-1,
+            script=bitcoin.core.script.CScript(),
             asset_address=None,
             asset_quantity=0,
             output_type=OutputType.uncolored):
         """
         Initializes a new instance of the TransactionOutput class.
 
-        :param int nValue: The satoshi value of the output.
-        :param CScript scriptPubKey: The script controlling redemption of the output.
+        :param int value: The satoshi value of the output.
+        :param CScript script: The script controlling redemption of the output.
         :param bytes | None asset_address: The asset address of the output.
         :param int asset_quantity: The asset quantity of the output.
         :param OutputType output_type: The type of the output.
         """
         assert 0 <= asset_quantity <= MarkerOutput.MAX_ASSET_QUANTITY
 
-        super(TransactionOutput, self).__init__(nValue=nValue, scriptPubKey=scriptPubKey)
+        self._value = value
+        self._script = script
         self._asset_address = asset_address
         self._asset_quantity = asset_quantity
         self._output_type = output_type
+
+    @property
+    def value(self):
+        """
+        Gets the number of satoshis in the output.
+
+        :return: The value of the output in satoshis.
+        :rtype: int
+        """
+        return self._value
+
+    @property
+    def script(self):
+        """
+        Gets the script of the output.
+
+        :return: The output script.
+        :rtype: CScript
+        """
+        return self._script
 
     @property
     def asset_address(self):
@@ -270,8 +291,8 @@ class TransactionOutput(bitcoin.core.CTxOut):
         return self._output_type
 
     def __repr__(self):
-        return 'TransactionOutput(nValue=%r, scriptPubKey=%r, asset_address=%r, asset_quantity=%r, output_type=%r)' % \
-            (self.nValue, self.scriptPubKey, self.asset_address, self.asset_quantity, self.output_type)
+        return 'TransactionOutput(value=%r, script=%r, asset_address=%r, asset_quantity=%r, output_type=%r)' % \
+            (self.value, self.script, self.asset_address, self.asset_quantity, self.output_type)
 
 
 class OutputCache(object):

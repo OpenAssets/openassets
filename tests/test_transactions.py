@@ -308,4 +308,4 @@ class SpendableOutputTests(unittest.TestCase):
             openassets.protocol.TransactionOutput(100))
 
         self.assertEqual('\x01' * 32, target.out_point.hash)
-        self.assertEqual(100, target.output.nValue)
+        self.assertEqual(100, target.output.value)

@@ -59,7 +59,7 @@ class TransactionBuilder(object):
             unspent_outputs, from_script, 2 * self._dust_amount + fees)
 
         return bitcoin.core.CTransaction(
-            vin=[bitcoin.core.CTxIn(item.out_point, item.output.scriptPubKey) for item in inputs],
+            vin=[bitcoin.core.CTxIn(item.out_point, item.output.script) for item in inputs],
             vout=[
                 self._get_colored_output(to_script),
                 self._get_marker_output([asset_quantity], metadata),
@@ -100,7 +100,7 @@ class TransactionBuilder(object):
                 outputs.append(self._get_colored_output(color_send[0]))
                 asset_quantities.append(collected_amount - asset_quantity)
 
-        btc_excess = sum([input.output.nValue for input in inputs]) - sum([output.nValue for output in outputs])
+        btc_excess = sum([input.output.value for input in inputs]) - sum([output.nValue for output in outputs])
 
         if btc_excess < amount_btc + fees:
             # Not enough bitcoin inputs
@@ -120,7 +120,7 @@ class TransactionBuilder(object):
             outputs.insert(0, self._get_marker_output(asset_quantities, b''))
 
         return bitcoin.core.CTransaction(
-            vin=[bitcoin.core.CTxIn(item.out_point, item.output.scriptPubKey) for item in inputs],
+            vin=[bitcoin.core.CTxIn(item.out_point, item.output.script) for item in inputs],
             vout=outputs
         )
 
@@ -216,9 +216,9 @@ class TransactionBuilder(object):
         total_amount = 0
         result = []
         for output in unspent_outputs:
-            if output.output.asset_address is None and bytes(output.output.scriptPubKey) == from_script:
+            if output.output.asset_address is None and bytes(output.output.script) == from_script:
                 result.append(output)
-                total_amount += output.output.nValue
+                total_amount += output.output.value
 
             if total_amount >= amount:
                 return result, total_amount
@@ -240,7 +240,7 @@ class TransactionBuilder(object):
         total_amount = 0
         result = []
         for output in unspent_outputs:
-            if output.output.asset_address == asset_address and bytes(output.output.scriptPubKey) == from_script:
+            if output.output.asset_address == asset_address and bytes(output.output.script) == from_script:
                 result.append(output)
                 total_amount += output.output.asset_quantity
 

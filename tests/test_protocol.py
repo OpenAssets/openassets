@@ -452,9 +452,9 @@ class ColoringEngineTests(unittest.TestCase):
             outputs,
             asset_quantities)
 
-    def assert_output(self, output, nValue, scriptPubKey, asset_address, asset_quantity, output_type):
-        self.assertEqual(nValue, output.nValue)
-        self.assertEqual(scriptPubKey, bytes(output.scriptPubKey))
+    def assert_output(self, output, value, script, asset_address, asset_quantity, output_type):
+        self.assertEqual(value, output.value)
+        self.assertEqual(script, bytes(output.script))
         self.assertEqual(asset_address, output.asset_address)
         self.assertEqual(asset_quantity, output.asset_quantity)
         self.assertEqual(output_type, output.output_type)
@@ -606,8 +606,8 @@ class TransactionOutputTests(unittest.TestCase):
         target = openassets.protocol.TransactionOutput(
             100, bitcoin.core.CScript(b'abcd'), b'efgh', 2 ** 63 - 1, OutputType.transfer)
 
-        self.assertEqual(100, target.nValue)
-        self.assertEqual(b'abcd', bytes(target.scriptPubKey))
+        self.assertEqual(100, target.value)
+        self.assertEqual(b'abcd', bytes(target.script))
         self.assertEqual(b'efgh', target.asset_address)
         self.assertEqual(2 ** 63 - 1, target.asset_quantity)
         self.assertEqual(OutputType.transfer, target.output_type)
@@ -624,8 +624,8 @@ class TransactionOutputTests(unittest.TestCase):
             100, bitcoin.core.CScript(b'abcd'), b'efgh', 1500, OutputType.transfer)
 
         self.assertEqual('TransactionOutput(' +
-            'nValue=100, ' +
-            'scriptPubKey=CScript([OP_NOP, OP_VER, OP_IF, OP_NOTIF]), ' +
+            'value=100, ' +
+            'script=CScript([OP_NOP, OP_VER, OP_IF, OP_NOTIF]), ' +
             'asset_address=b\'efgh\', ' +
             'asset_quantity=1500, ' +
             'output_type=<OutputType.transfer: 3>)',
