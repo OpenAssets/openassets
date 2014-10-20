@@ -55,18 +55,27 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
     import bitcoin.rpc
     import openassets.protocol
 
-    # Create a RPC client for Bitcoin Core
-    rpc_client = bitcoin.rpc.Proxy('http://user:pass@localhost:18332')
-    # OutputCache implements the interface required for an output cache provider, but does not perform any caching
-    cache = openassets.protocol.OutputCache()
-    # Instantiate the coloring engine
-    coloring_engine = openassets.protocol.ColoringEngine(asyncio.coroutine(rpc_client.getrawtransaction), cache)
+    @asyncio.coroutine
+    def main():
+        bitcoin.SelectParams('testnet')
 
-    transaction_hash = bitcoin.core.lx('864cbcb4b5e083a98aaeaf94443815025bdfb0d35a6fd00817034018b6752ff5')
-    output_index = 1
-    colored_output = coloring_engine.get_output(transaction_hash, output_index)
+        # Create a RPC client for Bitcoin Core
+        rpc_client = bitcoin.rpc.Proxy('http://user:pass@localhost:18332')
+        # OutputCache implements the interface required for an output cache provider, but does not perform any caching
+        cache = openassets.protocol.OutputCache()
+        # The transaction provider is a function returning a transaction given its hash
+        transaction_provider = asyncio.coroutine(rpc_client.getrawtransaction)
+        # Instantiate the coloring engine
+        coloring_engine = openassets.protocol.ColoringEngine(transaction_provider, cache, loop)
 
-    print(colored_output)
+        transaction_hash = bitcoin.core.lx('864cbcb4b5e083a98aaeaf94443815025bdfb0d35a6fd00817034018b6752ff5')
+        output_index = 1
+        colored_output = yield from coloring_engine.get_output(transaction_hash, output_index)
+
+        print(colored_output)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
 
 ``transactions`` submodule
 --------------------------
@@ -78,38 +87,50 @@ Usage
 
 This example requires a Bitcoin Core instance running with RPC enabled and the ``-txindex=1`` parameter::
 
+    import asyncio
     import bitcoin.rpc
     import openassets.protocol
     import openassets.transactions
 
-    # Create a RPC client for Bitcoin Core
-    rpc_client = bitcoin.rpc.Proxy('http://user:pass@localhost:18332')
+    @asyncio.coroutine
+    def main():
+        bitcoin.SelectParams('testnet')
 
-    # Obtain the unspent output for the local wallet
-    engine = openassets.protocol.ColoringEngine(rpc_client.getrawtransaction, openassets.protocol.OutputCache())
-    unspent_outputs = [
-        openassets.transactions.SpendableOutput(
-            bitcoin.core.COutPoint(output['outpoint'].hash, output['outpoint'].n),
-            engine.get_output(output['outpoint'].hash, output['outpoint'].n))
-        for output in rpc_client.listunspent()]
+        # Create a RPC client for Bitcoin Core
+        rpc_client = bitcoin.rpc.Proxy('http://user:pass@localhost:18332')
 
-    # The minimum valid value for an output is set to 600 satoshis
-    builder = openassets.transactions.TransactionBuilder(600)
+        # Initialize the coloring engine
+        transaction_provider = asyncio.coroutine(rpc_client.getrawtransaction)
+        engine = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
 
-    # Output script corresponding to address mihwXWqvcbrmgqMHXMHSTsH6Y36vwknwGi (in testnet)
-    output_script = bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac')
+        # Obtain the unspent output for the local wallet
+        unspent_outputs = []
+        for output in rpc_client.listunspent():
+            processed_output = yield from engine.get_output(output['outpoint'].hash, output['outpoint'].n)
+            unspent_outputs.append(openassets.transactions.SpendableOutput(
+                bitcoin.core.COutPoint(output['outpoint'].hash, output['outpoint'].n),
+                processed_output))
 
-    # Create the issuance transaction
-    transaction = builder.issue(
-        unspent_outputs=unspent_outputs,
-        from_script=output_script,          # Address the coins are issued from
-        to_script=output_script,            # The issued coins are sent back to the same address
-        change_script=output_script,        # The bitcoin change is sent back to the same address
-        asset_quantity=1500,                # Issue 1,500 units of the asset
-        metadata=b'',                       # No metadata
-        fees=10000)                         # 0.0001 BTC fees
+        # The minimum valid value for an output is set to 600 satoshis
+        builder = openassets.transactions.TransactionBuilder(600)
 
-    print(transaction)
+        # Output script corresponding to address mihwXWqvcbrmgqMHXMHSTsH6Y36vwknwGi (in testnet)
+        output_script = bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac')
+
+        # Create the issuance transaction
+        transaction = builder.issue(
+            unspent_outputs=unspent_outputs,
+            from_script=output_script,          # Address the coins are issued from
+            to_script=output_script,            # The issued coins are sent back to the same address
+            change_script=output_script,        # The bitcoin change is sent back to the same address
+            asset_quantity=1500,                # Issue 1,500 units of the asset
+            metadata=b'',                       # No metadata
+            fees=10000)                         # 0.0001 BTC fees
+
+        print(transaction)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
 
 License
 =======
