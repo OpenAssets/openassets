@@ -25,6 +25,17 @@
 import asyncio
 
 
+@asyncio.coroutine
+def assert_coroutine_raises(test, exception_type, target, *args, **kwargs):
+    try:
+        yield from target(*args, **kwargs)
+        test.fail()
+    except exception_type:
+        return
+    except:
+        test.fail()
+
+
 def async_test(function):
     def wrapper(*args, **kwargs):
         coroutine = asyncio.coroutine(function)

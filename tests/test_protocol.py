@@ -76,12 +76,7 @@ class ColoringEngineTests(unittest.TestCase):
 
         target = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
 
-        try:
-            yield from target.get_output(b'abcd', 2)
-        except ValueError:
-            pass
-        except:
-            self.fail()
+        yield from tests.helpers.assert_coroutine_raises(self, ValueError, target.get_output, b'abcd', 2)
 
         self.assertEqual(get_mock.call_args_list[0][0][1:], (b'abcd', 2))
 
@@ -417,6 +412,17 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.marker_output)
         self.assert_output(outputs[3], 3, b'3', b'a', 2, OutputType.transfer)
         self.assert_output(outputs[4], 4, b'4', b'a', 3, OutputType.transfer)
+
+    def test_compute_asset_addresses_no_input(self):
+        # Transaction with no input
+        outputs = self.color_outputs(
+            inputs=[],
+            asset_quantities=[3],
+            marker_index=1,
+            output_count=2
+        )
+
+        self.assertIsNone(outputs)
 
     # hash_script
 

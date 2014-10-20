@@ -133,6 +133,10 @@ class ColoringEngine(object):
         if len(asset_quantities) > len(outputs) - 1:
             return None
 
+        # If there is no input in the transaction, the marker output is always invalid
+        if len(inputs) == 0:
+            return None
+
         result = []
 
         # Add the issuance outputs
