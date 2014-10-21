@@ -224,6 +224,30 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[5], 60, vout[5].scriptPubKey, None, 0, OutputType.marker_output)
         self.assert_output(outputs[6], 70, vout[6].scriptPubKey, b'a', 8, OutputType.transfer)
 
+    @unittest.mock.patch('openassets.protocol.ColoringEngine.get_output', autospec=True)
+    @tests.helpers.async_test
+    def test_color_transaction_coinbase(self, get_output_mock, loop):
+        get_output_mock.side_effect = lambda _, __, index: self.as_future(self.create_test_outputs()[index - 1], loop)
+
+        target = openassets.protocol.ColoringEngine(None, None, loop)
+
+        transaction = bitcoin.core.CTransaction(
+            [
+                bitcoin.core.CTxIn(bitcoin.core.COutPoint(b'\x00' * 32, 0xffffffff))
+            ],
+            [
+                bitcoin.core.CTxOut(10, bitcoin.core.CScript(b'\x10')),
+                bitcoin.core.CTxOut(20, bitcoin.core.CScript(b'\x6a\x07' + b'OA\x01\x00' + b'\x01\x05' + b'\00')),
+                bitcoin.core.CTxOut(30, bitcoin.core.CScript(b'\x20'))
+            ]
+        )
+
+        outputs = yield from target.color_transaction(transaction)
+
+        self.assert_output(outputs[0], 10, transaction.vout[0].scriptPubKey, None, 0, OutputType.uncolored)
+        self.assert_output(outputs[1], 20, transaction.vout[1].scriptPubKey, None, 0, OutputType.uncolored)
+        self.assert_output(outputs[2], 30, transaction.vout[2].scriptPubKey, None, 0, OutputType.uncolored)
+
     # compute_asset_addresses
 
     def test_compute_asset_addresses_issuance(self):

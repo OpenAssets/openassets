@@ -86,27 +86,29 @@ class ColoringEngine(object):
         :return: A list containing all the colored outputs of the transaction.
         :rtype: Future[list[TransactionOutput]]
         """
-        for i, output in enumerate(transaction.vout):
-            # Parse the OP_RETURN script
-            marker_output_payload = MarkerOutput.parse_script(output.scriptPubKey)
+        # If the transaction is a coinbase transaction, the marker output is always invalid
+        if not transaction.is_coinbase():
+            for i, output in enumerate(transaction.vout):
+                # Parse the OP_RETURN script
+                marker_output_payload = MarkerOutput.parse_script(output.scriptPubKey)
 
-            if marker_output_payload is not None:
-                # Deserialize the payload as a marker output
-                marker_output = MarkerOutput.deserialize_payload(marker_output_payload)
+                if marker_output_payload is not None:
+                    # Deserialize the payload as a marker output
+                    marker_output = MarkerOutput.deserialize_payload(marker_output_payload)
 
-                if marker_output is not None:
-                    # Fetch the colored outputs for previous transactions
-                    input_futures = [self.get_output(item.prevout.hash, item.prevout.n) for item in transaction.vin]
-                    inputs = yield from asyncio.gather(*input_futures, loop=self._loop)
+                    if marker_output is not None:
+                        # Fetch the colored outputs for previous transactions
+                        input_futures = [self.get_output(item.prevout.hash, item.prevout.n) for item in transaction.vin]
+                        inputs = yield from asyncio.gather(*input_futures, loop=self._loop)
 
-                    asset_addresses = self._compute_asset_addresses(
-                        inputs,
-                        i,
-                        transaction.vout,
-                        marker_output.asset_quantities)
+                        asset_addresses = self._compute_asset_addresses(
+                            inputs,
+                            i,
+                            transaction.vout,
+                            marker_output.asset_quantities)
 
-                    if asset_addresses is not None:
-                        return asset_addresses
+                        if asset_addresses is not None:
+                            return asset_addresses
 
         # If no valid marker output was found in the transaction, all outputs are considered uncolored
         return [
