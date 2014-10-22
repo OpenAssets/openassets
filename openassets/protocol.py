@@ -98,8 +98,10 @@ class ColoringEngine(object):
 
                     if marker_output is not None:
                         # Fetch the colored outputs for previous transactions
-                        input_futures = [self.get_output(item.prevout.hash, item.prevout.n) for item in transaction.vin]
-                        inputs = yield from asyncio.gather(*input_futures, loop=self._loop)
+                        inputs = []
+                        for input in transaction.vin:
+                            inputs.append((yield from asyncio.async(
+                                self.get_output(input.prevout.hash, input.prevout.n), loop=self._loop)))
 
                         asset_addresses = self._compute_asset_addresses(
                             inputs,
