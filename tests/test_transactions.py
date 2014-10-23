@@ -40,15 +40,15 @@ class TransactionBuilderTests(unittest.TestCase):
         outputs = self.generate_outputs([
             (20, b'source', b'a1', 50),
             (15, b'source', None, 0),
-            (20, b'other', None, 0),
             (10, b'source', None, 0)
         ])
 
-        result = self.target.issue(outputs, b'source', b'target', b'change', 1000, b'metadata', 5)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 1000)
+        result = self.target.issue(spec, b'metadata', 5)
 
         self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[1], b'2' * 32, 2, b'source')
         self.assertEqual(3, len(result.vout))
         # Asset issued
         self.assert_output(result.vout[0], 10, b'target')
@@ -61,30 +61,30 @@ class TransactionBuilderTests(unittest.TestCase):
         outputs = self.generate_outputs([
             (20, b'source', b'a1', 50),
             (15, b'source', None, 0),
-            (20, b'other', None, 0),
             (5, b'source', None, 0)
         ])
 
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 1000)
         self.assertRaises(
             openassets.transactions.InsufficientFundsError,
-            self.target.issue, outputs, b'source', b'target', b'change', 1000, b'metadata', 5)
+            self.target.issue, spec, b'metadata', 5)
 
     def test_transfer_bitcoin_with_change(self):
         outputs = self.generate_outputs([
             (150, b'source', b'a1', 50),
             (150, b'source', None, 0),
-            (150, b'other', None, 0),
             (150, b'source', None, 0)
         ])
 
-        result = self.target.transfer_bitcoin(outputs, b'source', b'target', 200, 10)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 200)
+        result = self.target.transfer_bitcoin(spec, 10)
 
         self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[1], b'2' * 32, 2, b'source')
         self.assertEqual(2, len(result.vout))
         # Bitcoin change
-        self.assert_output(result.vout[0], 90, b'source')
+        self.assert_output(result.vout[0], 90, b'change')
         # Bitcoins sent
         self.assert_output(result.vout[1], 200, b'target')
 
@@ -92,15 +92,15 @@ class TransactionBuilderTests(unittest.TestCase):
         outputs = self.generate_outputs([
             (150, b'source', b'a1', 50),
             (60, b'source', None, 0),
-            (150, b'other', None, 0),
             (150, b'source', None, 0)
         ])
 
-        result = self.target.transfer_bitcoin(outputs, b'source', b'target', 200, 10)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 200)
+        result = self.target.transfer_bitcoin(spec, 10)
 
         self.assertEqual(2, len(result.vin))
         self.assert_input(result.vin[0], b'1' * 32, 1, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[1], b'2' * 32, 2, b'source')
         self.assertEqual(1, len(result.vout))
         # Bitcoins sent
         self.assert_output(result.vout[0], 200, b'target')
@@ -110,13 +110,14 @@ class TransactionBuilderTests(unittest.TestCase):
             (25, b'source', None, 0),
         ])
 
-        result = self.target.transfer_bitcoin(outputs, b'source', b'target', 10, 5)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 10)
+        result = self.target.transfer_bitcoin(spec, 5)
 
         self.assertEqual(1, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
         self.assertEqual(2, len(result.vout))
         # Bitcoin change
-        self.assert_output(result.vout[0], 10, b'source')
+        self.assert_output(result.vout[0], 10, b'change')
         # Bitcoins sent
         self.assert_output(result.vout[1], 10, b'target')
 
@@ -124,45 +125,47 @@ class TransactionBuilderTests(unittest.TestCase):
         outputs = self.generate_outputs([
             (150, b'source', b'a1', 50),
             (60, b'source', None, 0),
-            (150, b'other', None, 0),
             (150, b'source', None, 0)
         ])
 
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 201)
         self.assertRaises(
             openassets.transactions.InsufficientFundsError,
-            self.target.transfer_bitcoin, outputs, b'source', b'target', 201, 10)
+            self.target.transfer_bitcoin, spec, 10)
 
     def test_transfer_bitcoin_dust_output(self):
         outputs = self.generate_outputs([
             (19, b'source', None, 0)
         ])
 
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 9)
         self.assertRaises(
             openassets.transactions.DustOutputError,
-            self.target.transfer_bitcoin, outputs, b'source', b'target', 9, 10)
+            self.target.transfer_bitcoin, spec, 10)
 
     def test_transfer_bitcoin_dust_change(self):
         outputs = self.generate_outputs([
             (150, b'source', None, 0)
         ])
 
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 150 - 10 - 9)
         self.assertRaises(
             openassets.transactions.DustOutputError,
-            self.target.transfer_bitcoin, outputs, b'source', b'target', 150 - 10 - 9, 10)
+            self.target.transfer_bitcoin, spec, 10)
 
     def test_transfer_assets_with_change(self):
         outputs = self.generate_outputs([
             (10, b'source', b'a1', 50),
             (80, b'source', None, 0),
-            (10, b'other', None, 0),
             (20, b'source', b'a1', 100)
         ])
 
-        result = self.target.transfer_assets(outputs, b'source', b'target', b'a1', 120, 40)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 120)
+        result = self.target.transfer_assets(b'a1', spec, 40)
 
         self.assertEqual(3, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[1], b'2' * 32, 2, b'source')
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
         self.assertEqual(4, len(result.vout))
         # Marker output
@@ -170,23 +173,23 @@ class TransactionBuilderTests(unittest.TestCase):
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
         # Asset change
-        self.assert_output(result.vout[2], 10, b'source')
+        self.assert_output(result.vout[2], 10, b'change')
         # Bitcoin change
-        self.assert_output(result.vout[3], 50, b'source')
+        self.assert_output(result.vout[3], 50, b'change')
 
     def test_transfer_assets_no_change(self):
         outputs = self.generate_outputs([
             (10, b'source', b'a1', 50),
             (80, b'source', None, 0),
-            (10, b'other', None, 0),
             (10, b'source', b'a1', 70)
         ])
 
-        result = self.target.transfer_assets(outputs, b'source', b'target', b'a1', 120, 40)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 120)
+        result = self.target.transfer_assets(b'a1', spec, 40)
 
         self.assertEqual(3, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source')
+        self.assert_input(result.vin[1], b'2' * 32, 2, b'source')
         self.assert_input(result.vin[2], b'1' * 32, 1, b'source')
         self.assertEqual(3, len(result.vout))
         # Marker output
@@ -194,7 +197,7 @@ class TransactionBuilderTests(unittest.TestCase):
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
         # Bitcoin change
-        self.assert_output(result.vout[2], 50, b'source')
+        self.assert_output(result.vout[2], 50, b'change')
 
     def test_transfer_assets_insufficient_asset_quantity(self):
         outputs = self.generate_outputs([
@@ -204,26 +207,28 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', b'a1', 70)
         ])
 
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 121)
         self.assertRaises(
             openassets.transactions.InsufficientAssetQuantityError,
-            self.target.transfer_assets, outputs, b'source', b'target', b'a1', 121, 40)
+            self.target.transfer_assets, b'a1', spec, 40)
 
     def test_btc_asset_swap(self):
         outputs = self.generate_outputs([
-            (10, b'other', b'a1', 50),
             (90, b'source_btc', None, 0),
+            (100, b'source_btc', None, 0),
             (10, b'source_asset', b'a1', 50),
             (10, b'source_asset', b'a1', 100),
-            (100, b'source_btc', None, 0)
         ])
 
-        result = self.target.btc_asset_swap(outputs, b'source_asset', b'source_btc', b'a1', 120, 160, 10)
+        btc_spec = openassets.transactions.TransferParameters(outputs[0:2], b'source_asset', b'source_btc', 160)
+        asset_spec = openassets.transactions.TransferParameters(outputs[2:4], b'source_btc', b'source_asset', 120)
+        result = self.target.btc_asset_swap(btc_spec, b'a1', asset_spec, 10)
 
         self.assertEqual(4, len(result.vin))
         self.assert_input(result.vin[0], b'2' * 32, 2, b'source_asset')
         self.assert_input(result.vin[1], b'3' * 32, 3, b'source_asset')
-        self.assert_input(result.vin[2], b'1' * 32, 1, b'source_btc')
-        self.assert_input(result.vin[3], b'4' * 32, 4, b'source_btc')
+        self.assert_input(result.vin[2], b'0' * 32, 0, b'source_btc')
+        self.assert_input(result.vin[3], b'1' * 32, 1, b'source_btc')
         self.assertEqual(5, len(result.vout))
         # Marker output
         self.assert_marker(result.vout[0], [120, 30], b'')
@@ -238,21 +243,22 @@ class TransactionBuilderTests(unittest.TestCase):
 
     def test_asset_asset_swap(self):
         outputs = self.generate_outputs([
-            (10, b'other', b'a1', 50),
             (10, b'source_1', b'a1', 100),
-            (10, b'source_2', b'a2', 600),
             (10, b'source_1', b'a1', 80),
+            (80, b'source_1', None, 0),
+            (10, b'source_2', b'a2', 600),
             (100, b'source_2', None, 0),
-            (80, b'source_1', None, 0)
         ])
 
-        result = self.target.asset_asset_swap(outputs, b'source_1', b'source_2', b'a1', 120, b'a2', 260, 20)
+        asset1_spec = openassets.transactions.TransferParameters(outputs[0:3], b'source_2', b'source_1', 120)
+        asset2_spec = openassets.transactions.TransferParameters(outputs[3:4], b'source_1', b'source_2', 260)
+        result = self.target.asset_asset_swap(b'a1', asset1_spec, b'a2', asset2_spec, 20)
 
         self.assertEqual(4, len(result.vin))
-        self.assert_input(result.vin[0], b'1' * 32, 1, b'source_1')
-        self.assert_input(result.vin[1], b'3' * 32, 3, b'source_1')
-        self.assert_input(result.vin[2], b'2' * 32, 2, b'source_2')
-        self.assert_input(result.vin[3], b'5' * 32, 5, b'source_1')
+        self.assert_input(result.vin[0], b'0' * 32, 0, b'source_1')
+        self.assert_input(result.vin[1], b'1' * 32, 1, b'source_1')
+        self.assert_input(result.vin[2], b'3' * 32, 3, b'source_2')
+        self.assert_input(result.vin[3], b'2' * 32, 2, b'source_1')
         self.assertEqual(6, len(result.vout))
         # Marker output
         self.assert_marker(result.vout[0], [120, 60, 260, 340], b'')
