@@ -125,19 +125,20 @@ class TransactionBuilder(object):
         """
         return self.transfer([], transfer_spec, fees)
 
-    def transfer_assets(self, asset_address, transfer_spec, fees):
+    def transfer_assets(self, asset_address, transfer_spec, btc_change_script, fees):
         """
         Creates a transaction for sending an asset.
 
         :param bytes asset_address: The address of the asset being sent.
         :param TransferParameters transfer_spec: The parameters of the bitcoins being transferred.
+        :param bytes btc_change_script: The script where to send bitcoin change, if any.
         :param int fees: The fees to include in the transaction.
         :return: The resulting unsigned transaction.
         :rtype: CTransaction
         """
         return self.transfer(
             [(asset_address, transfer_spec)],
-            TransferParameters(transfer_spec.unspent_outputs, transfer_spec.to_script, transfer_spec.change_script, 0),
+            TransferParameters(transfer_spec.unspent_outputs, None, btc_change_script, 0),
             fees)
 
     def btc_asset_swap(self, btc_transfer_spec, asset_address, asset_transfer_spec, fees):

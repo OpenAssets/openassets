@@ -160,8 +160,8 @@ class TransactionBuilderTests(unittest.TestCase):
             (20, b'source', b'a1', 100)
         ])
 
-        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 120)
-        result = self.target.transfer_assets(b'a1', spec, 40)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'asset_change', 120)
+        result = self.target.transfer_assets(b'a1', spec, b'bitcoin_change', 40)
 
         self.assertEqual(3, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
@@ -173,9 +173,9 @@ class TransactionBuilderTests(unittest.TestCase):
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
         # Asset change
-        self.assert_output(result.vout[2], 10, b'change')
+        self.assert_output(result.vout[2], 10, b'asset_change')
         # Bitcoin change
-        self.assert_output(result.vout[3], 50, b'change')
+        self.assert_output(result.vout[3], 50, b'bitcoin_change')
 
     def test_transfer_assets_no_change(self):
         outputs = self.generate_outputs([
@@ -184,8 +184,8 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', b'a1', 70)
         ])
 
-        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 120)
-        result = self.target.transfer_assets(b'a1', spec, 40)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'asset_change', 120)
+        result = self.target.transfer_assets(b'a1', spec, b'bitcoin_change', 40)
 
         self.assertEqual(3, len(result.vin))
         self.assert_input(result.vin[0], b'0' * 32, 0, b'source')
@@ -197,7 +197,7 @@ class TransactionBuilderTests(unittest.TestCase):
         # Asset sent
         self.assert_output(result.vout[1], 10, b'target')
         # Bitcoin change
-        self.assert_output(result.vout[2], 50, b'change')
+        self.assert_output(result.vout[2], 50, b'bitcoin_change')
 
     def test_transfer_assets_insufficient_asset_quantity(self):
         outputs = self.generate_outputs([
@@ -207,10 +207,10 @@ class TransactionBuilderTests(unittest.TestCase):
             (10, b'source', b'a1', 70)
         ])
 
-        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 121)
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'asset_change', 121)
         self.assertRaises(
             openassets.transactions.InsufficientAssetQuantityError,
-            self.target.transfer_assets, b'a1', spec, 40)
+            self.target.transfer_assets, b'a1', spec, b'bitcoin_change', 40)
 
     def test_btc_asset_swap(self):
         outputs = self.generate_outputs([
