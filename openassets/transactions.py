@@ -130,7 +130,7 @@ class TransactionBuilder(object):
         Creates a transaction for sending an asset.
 
         :param bytes asset_address: The address of the asset being sent.
-        :param TransferParameters transfer_spec: The parameters of the bitcoins being transferred.
+        :param TransferParameters transfer_spec: The parameters of the asset being transferred.
         :param bytes btc_change_script: The script where to send bitcoin change, if any.
         :param int fees: The fees to include in the transaction.
         :return: The resulting unsigned transaction.
@@ -172,9 +172,7 @@ class TransactionBuilder(object):
             asset1_transfer_spec.unspent_outputs, asset1_transfer_spec.to_script, asset1_transfer_spec.change_script, 0)
 
         return self.transfer(
-            [(asset1_address, asset1_transfer_spec), (asset2_address, asset2_transfer_spec)],
-            btc_transfer_spec,
-            fees)
+            [(asset1_address, asset1_transfer_spec), (asset2_address, asset2_transfer_spec)], btc_transfer_spec, fees)
 
     @staticmethod
     def _collect_uncolored_outputs(unspent_outputs, amount):
@@ -300,10 +298,10 @@ class TransferParameters(object):
         """
         Initializes an instance of the TransferParameters class.
 
-        :param list[SpendableOutput] unspent_outputs:
-        :param bytes to_script:
-        :param bytes change_script:
-        :param int amount:
+        :param list[SpendableOutput] unspent_outputs: The unspent outputs available for the transaction.
+        :param bytes to_script: The output script to which to send the assets or bitcoins.
+        :param bytes change_script: The output script to which to send any remaining change.
+        :param int amount: The asset quantity or amount of satoshis sent in the transaction.
         """
         self._unspent_outputs = unspent_outputs
         self._to_script = to_script
@@ -313,7 +311,7 @@ class TransferParameters(object):
     @property
     def unspent_outputs(self):
         """
-        Gets the available unspent outputs for the transaction.
+        Gets the unspent outputs available for the transaction.
 
         :return: The list of unspent outputs.
         :rtype: list[SpendableOutput]
@@ -323,7 +321,7 @@ class TransferParameters(object):
     @property
     def to_script(self):
         """
-        The output script to which to send the assets or bitcoins.
+        Gets the output script to which to send the assets or bitcoins.
 
         :return: The output script.
         :rtype: bytes
@@ -333,7 +331,7 @@ class TransferParameters(object):
     @property
     def change_script(self):
         """
-        The output script to which to send any remaining change.
+        Gets the output script to which to send any remaining change.
 
         :return: The output script.
         :rtype: bytes
@@ -343,7 +341,7 @@ class TransferParameters(object):
     @property
     def amount(self):
         """
-        Either the asset quantity or amount of satoshis sent in the transaction.
+        Gets either the asset quantity or amount of satoshis sent in the transaction.
 
         :return: The asset quantity or amount of satoshis.
         :rtype: int
