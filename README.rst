@@ -117,13 +117,16 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
         # Output script corresponding to address mihwXWqvcbrmgqMHXMHSTsH6Y36vwknwGi (in testnet)
         output_script = bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac')
 
-        # Create the issuance transaction
-        transaction = builder.issue(
-            unspent_outputs=unspent_outputs,
-            from_script=output_script,          # Address the coins are issued from
+        # Create the issuance parameters
+        issuance_parameters = openassets.transactions.TransferParameters(
+            unspent_outputs=unspent_outputs,    # Unspent outputs the coins are issued from
             to_script=output_script,            # The issued coins are sent back to the same address
             change_script=output_script,        # The bitcoin change is sent back to the same address
-            asset_quantity=1500,                # Issue 1,500 units of the asset
+            amount=1500)                        # Issue 1,500 units of the asset
+
+        # Create the issuance transaction
+        transaction = builder.issue(
+            issuance_spec=issuance_parameters,
             metadata=b'',                       # No metadata
             fees=10000)                         # 0.0001 BTC fees
 
