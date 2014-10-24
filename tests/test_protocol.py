@@ -448,6 +448,38 @@ class ColoringEngineTests(unittest.TestCase):
 
         self.assertIsNone(outputs)
 
+    def test_compute_asset_addresses_no_asset_quantity(self):
+        # Issue an asset
+        outputs = self.color_outputs(
+            inputs=[
+                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
+                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
+            ],
+            asset_quantities=[],
+            marker_index=1,
+            output_count=3
+        )
+
+        self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.issuance)
+        self.assert_output(outputs[1], 1, b'1', None, 0, OutputType.marker_output)
+        self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.transfer)
+
+    def test_compute_asset_addresses_zero_asset_quantity(self):
+        # Issue an asset
+        outputs = self.color_outputs(
+            inputs=[
+                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
+                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
+            ],
+            asset_quantities=[0],
+            marker_index=1,
+            output_count=3
+        )
+
+        self.assert_output(outputs[0], 0, b'0', None, 0, OutputType.issuance)
+        self.assert_output(outputs[1], 1, b'1', None, 0, OutputType.marker_output)
+        self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.transfer)
+
     # hash_script
 
     def test_hash_script(self):

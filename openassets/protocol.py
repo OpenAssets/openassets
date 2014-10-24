@@ -144,8 +144,13 @@ class ColoringEngine(object):
         issuance_address = cls.hash_script(bytes(inputs[0].script))
 
         for i in range(0, marker_output_index):
-            result.append(TransactionOutput(
-                outputs[i].nValue, outputs[i].scriptPubKey, issuance_address, asset_quantities[i], OutputType.issuance))
+            value, script = outputs[i].nValue, outputs[i].scriptPubKey
+            if i < len(asset_quantities) and asset_quantities[i] > 0:
+                output = TransactionOutput(value, script, issuance_address, asset_quantities[i], OutputType.issuance)
+            else:
+                output = TransactionOutput(value, script, None, 0, OutputType.issuance)
+
+            result.append(output)
 
         # Add the marker output
         issuance_output = outputs[marker_output_index]
