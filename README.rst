@@ -11,7 +11,7 @@ Requirements
 The following items are required for using the ``openassets`` package:
 
 * Python 3.4
-* The `python-bitcoinlib <https://github.com/petertodd/python-bitcoinlib>`_ package
+* The package `python-bitcoinlib 0.2.1 <https://github.com/petertodd/python-bitcoinlib>`_
 
 Installation
 ============
@@ -99,6 +99,9 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
         # Create a RPC client for Bitcoin Core
         rpc_client = bitcoin.rpc.Proxy('http://user:pass@localhost:18332')
 
+        # Output script corresponding to address myLPe3P8SE2DyqRwABRwqezxdZxhkYxXYu (in testnet)
+        output_script = bitcoin.core.x('76a914c372d85bc2c54384dbc2cb9ef365eb7f15d4a9b688ac')
+
         # Initialize the coloring engine
         transaction_provider = asyncio.coroutine(rpc_client.getrawtransaction)
         engine = openassets.protocol.ColoringEngine(transaction_provider, openassets.protocol.OutputCache(), loop)
@@ -106,16 +109,14 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
         # Obtain the unspent output for the local wallet
         unspent_outputs = []
         for output in rpc_client.listunspent():
-            processed_output = yield from engine.get_output(output['outpoint'].hash, output['outpoint'].n)
-            unspent_outputs.append(openassets.transactions.SpendableOutput(
-                bitcoin.core.COutPoint(output['outpoint'].hash, output['outpoint'].n),
-                processed_output))
+            if output['scriptPubKey'] == output_script:
+                unspent_outputs.append(openassets.transactions.SpendableOutput(
+                    bitcoin.core.COutPoint(output['outpoint'].hash, output['outpoint'].n),
+                    (yield from engine.get_output(output['outpoint'].hash, output['outpoint'].n))
+                ))
 
         # The minimum valid value for an output is set to 600 satoshis
         builder = openassets.transactions.TransactionBuilder(600)
-
-        # Output script corresponding to address mihwXWqvcbrmgqMHXMHSTsH6Y36vwknwGi (in testnet)
-        output_script = bitcoin.core.x('76a91422fc4fd9943dab425a96c966112d593e97d1641488ac')
 
         # Create the issuance parameters
         issuance_parameters = openassets.transactions.TransferParameters(
@@ -125,10 +126,8 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
             amount=1500)                        # Issue 1,500 units of the asset
 
         # Create the issuance transaction
-        transaction = builder.issue(
-            issuance_spec=issuance_parameters,
-            metadata=b'',                       # No metadata
-            fees=10000)                         # 0.0001 BTC fees
+        # The metadata is left empty and the fees are set to 0.0001 BTC
+        transaction = builder.issue(issuance_parameters, metadata=b'', fees=10000)
 
         print(transaction)
 
