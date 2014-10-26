@@ -18,7 +18,7 @@ setuptools.setup(
     url = 'https://github.com/OpenAssets/openassets',
     license = 'MIT License',
     install_requires = [
-        'python-bitcoinlib == 0.1.1'
+        'python-bitcoinlib == 0.2.1'
     ],
     test_suite = 'tests',
     classifiers = [

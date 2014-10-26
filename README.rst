@@ -11,7 +11,7 @@ Requirements
 The following items are required for using the ``openassets`` package:
 
 * Python 3.4
-* The package `python-bitcoinlib 0.2.1 <https://github.com/petertodd/python-bitcoinlib>`_
+* The `python-bitcoinlib <https://github.com/petertodd/python-bitcoinlib>`_ package
 
 Installation
 ============
