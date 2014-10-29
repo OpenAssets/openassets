@@ -278,7 +278,7 @@ class TransactionBuilderTests(unittest.TestCase):
     def generate_outputs(self, definitions):
         result = []
         # Each definition has the following format:
-        # (value, output_script, asset_address, asset_quantity)
+        # (value, output_script, asset_id, asset_quantity)
         for i, item in enumerate(definitions):
             byte = bytes(str(i), encoding='UTF-8')
             result.append(openassets.transactions.SpendableOutput(

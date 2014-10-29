@@ -130,8 +130,8 @@ class ColoringEngineTests(unittest.TestCase):
 
         result = yield from target.get_output(b'\x01', 1)
 
-        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'\x40')
-        self.assert_output(result, 10, b'\x10', issuance_asset_address, 5, OutputType.transfer)
+        issuance_asset_id = openassets.protocol.ColoringEngine.hash_script(b'\x40')
+        self.assert_output(result, 10, b'\x10', issuance_asset_id, 5, OutputType.transfer)
         self.assertEqual(0, depth_counter[0])
         self.assertEqual(1000, len(get_mock.call_args_list))
         self.assertEqual(2 * 998 + 3 + 1, len(put_mock.call_args_list))
@@ -149,8 +149,8 @@ class ColoringEngineTests(unittest.TestCase):
         outputs = yield from target.color_transaction(self.create_test_transaction(
             b'\x6a\x08' + b'OA\x01\x00' + b'\x02\x05\x07' + b'\00'))
 
-        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'\x10')
-        self.assert_output(outputs[0], 10, b'\x10', issuance_asset_address, 5, OutputType.issuance)
+        issuance_asset_id = openassets.protocol.ColoringEngine.hash_script(b'\x10')
+        self.assert_output(outputs[0], 10, b'\x10', issuance_asset_id, 5, OutputType.issuance)
         self.assert_output(outputs[1], 20, b'\x6a\x08' + b'OA\x01\x00' + b'\x02\x05\x07' + b'\00',
             None, 0, OutputType.marker_output)
         self.assert_output(outputs[2], 30, b'\x20', b'a', 7, OutputType.transfer)
@@ -201,7 +201,7 @@ class ColoringEngineTests(unittest.TestCase):
                 # the marker output is considered invalid.
                 bitcoin.core.CTxOut(40, bitcoin.core.CScript(
                     b'\x6a\x0B' + b'OA\x01\x00' + b'\x05' + b'\x00\x00\x00\x08\x02' + b'\x00')),
-                # If any output contains units from more than one distinct asset address,
+                # If any output contains units from more than one distinct asset ID,
                 # the marker output is considered invalid
                 bitcoin.core.CTxOut(50, bitcoin.core.CScript(
                     b'\x6a\x0B' + b'OA\x01\x00' + b'\x05' + b'\x00\x00\x00\x00\x09' + b'\x00')),
@@ -214,13 +214,13 @@ class ColoringEngineTests(unittest.TestCase):
 
         outputs = yield from target.color_transaction(transaction)
 
-        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'\x10')
+        issuance_asset_id = openassets.protocol.ColoringEngine.hash_script(b'\x10')
         vout = transaction.vout
-        self.assert_output(outputs[0], 10, vout[0].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[1], 20, vout[1].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[2], 30, vout[2].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[3], 40, vout[3].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[4], 50, vout[4].scriptPubKey, issuance_asset_address, 1, OutputType.issuance)
+        self.assert_output(outputs[0], 10, vout[0].scriptPubKey, issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[1], 20, vout[1].scriptPubKey, issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[2], 30, vout[2].scriptPubKey, issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[3], 40, vout[3].scriptPubKey, issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[4], 50, vout[4].scriptPubKey, issuance_asset_id, 1, OutputType.issuance)
         self.assert_output(outputs[5], 60, vout[5].scriptPubKey, None, 0, OutputType.marker_output)
         self.assert_output(outputs[6], 70, vout[6].scriptPubKey, b'a', 8, OutputType.transfer)
 
@@ -248,30 +248,30 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[1], 20, transaction.vout[1].scriptPubKey, None, 0, OutputType.uncolored)
         self.assert_output(outputs[2], 30, transaction.vout[2].scriptPubKey, None, 0, OutputType.uncolored)
 
-    # compute_asset_addresses
+    # _compute_asset_ids
 
-    def test_compute_asset_addresses_issuance(self):
+    def test_compute_asset_ids_issuance(self):
         # Issue an asset
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
             ],
             asset_quantities=[1, 3],
             marker_index=2,
             output_count=3
         )
 
-        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'abcdef')
-        self.assert_output(outputs[0], 0, b'0', issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[1], 1, b'1', issuance_asset_address, 3, OutputType.issuance)
+        issuance_asset_id = openassets.protocol.ColoringEngine.hash_script(b'abcdef')
+        self.assert_output(outputs[0], 0, b'0', issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[1], 1, b'1', issuance_asset_id, 3, OutputType.issuance)
         self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.marker_output)
 
-    def test_compute_asset_addresses_transfer(self):
+    def test_compute_asset_ids_transfer(self):
         # No asset quantity defined
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[],
             output_count=1
@@ -281,7 +281,7 @@ class ColoringEngineTests(unittest.TestCase):
         # More asset quantity values than outputs
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[1],
             output_count=1
@@ -291,7 +291,7 @@ class ColoringEngineTests(unittest.TestCase):
         # Single input and single output
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[2],
             output_count=2
@@ -302,7 +302,7 @@ class ColoringEngineTests(unittest.TestCase):
         # Empty outputs
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[0, 1, 0, 1],
             output_count=6
@@ -317,11 +317,11 @@ class ColoringEngineTests(unittest.TestCase):
         # Empty inputs
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': None, 'asset_quantity': 0},
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': None, 'asset_quantity': 0},
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': None, 'asset_quantity': 0}
+                {'asset_id': None, 'asset_quantity': 0},
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': None, 'asset_quantity': 0},
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': None, 'asset_quantity': 0}
             ],
             asset_quantities=[2],
             output_count=2
@@ -332,8 +332,8 @@ class ColoringEngineTests(unittest.TestCase):
         # Input partially unassigned
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': b'a', 'asset_quantity': 3}
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': b'a', 'asset_quantity': 3}
             ],
             asset_quantities=[1, 2],
             output_count=3
@@ -345,8 +345,8 @@ class ColoringEngineTests(unittest.TestCase):
         # Entire input unassigned
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': b'a', 'asset_quantity': 3}
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': b'a', 'asset_quantity': 3}
             ],
             asset_quantities=[1],
             output_count=3
@@ -358,8 +358,8 @@ class ColoringEngineTests(unittest.TestCase):
         # Output partially unassigned
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[1, 3],
             output_count=3
@@ -369,7 +369,7 @@ class ColoringEngineTests(unittest.TestCase):
         # Entire output unassigned
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 1}
+                {'asset_id': b'a', 'asset_quantity': 1}
             ],
             asset_quantities=[1, 3],
             output_count=3
@@ -379,9 +379,9 @@ class ColoringEngineTests(unittest.TestCase):
         # Multiple inputs and outputs - Matching asset quantities
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': b'b', 'asset_quantity': 2},
-                {'asset_address': b'c', 'asset_quantity': 3}
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': b'b', 'asset_quantity': 2},
+                {'asset_id': b'c', 'asset_quantity': 3}
             ],
             asset_quantities=[1, 2, 3],
             output_count=4
@@ -394,9 +394,9 @@ class ColoringEngineTests(unittest.TestCase):
         # Multiple inputs and outputs - Mixing same asset
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2},
-                {'asset_address': b'a', 'asset_quantity': 1},
-                {'asset_address': b'a', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2},
+                {'asset_id': b'a', 'asset_quantity': 1},
+                {'asset_id': b'a', 'asset_quantity': 2}
             ],
             asset_quantities=[1, 3, 1],
             output_count=4
@@ -409,35 +409,35 @@ class ColoringEngineTests(unittest.TestCase):
         # Multiple inputs and outputs - Mixing different assets
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 2},
-                {'asset_address': b'b', 'asset_quantity': 1},
-                {'asset_address': b'c', 'asset_quantity': 2}
+                {'asset_id': b'a', 'asset_quantity': 2},
+                {'asset_id': b'b', 'asset_quantity': 1},
+                {'asset_id': b'c', 'asset_quantity': 2}
             ],
             asset_quantities=[1, 3, 1],
             output_count=4
         )
         self.assertIsNone(outputs)
 
-    def test_compute_asset_addresses_issuance_transfer(self):
+    def test_compute_asset_ids_issuance_transfer(self):
         # Transaction mixing both issuance and transfer
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': b'a', 'asset_quantity': 3, 'output_script': b'abcdef'},
-                {'asset_address': b'a', 'asset_quantity': 2, 'output_script': b'ghijkl'}
+                {'asset_id': b'a', 'asset_quantity': 3, 'output_script': b'abcdef'},
+                {'asset_id': b'a', 'asset_quantity': 2, 'output_script': b'ghijkl'}
             ],
             asset_quantities=[1, 4, 2, 3],
             marker_index=2,
             output_count=5
         )
 
-        issuance_asset_address = openassets.protocol.ColoringEngine.hash_script(b'abcdef')
-        self.assert_output(outputs[0], 0, b'0', issuance_asset_address, 1, OutputType.issuance)
-        self.assert_output(outputs[1], 1, b'1', issuance_asset_address, 4, OutputType.issuance)
+        issuance_asset_id = openassets.protocol.ColoringEngine.hash_script(b'abcdef')
+        self.assert_output(outputs[0], 0, b'0', issuance_asset_id, 1, OutputType.issuance)
+        self.assert_output(outputs[1], 1, b'1', issuance_asset_id, 4, OutputType.issuance)
         self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.marker_output)
         self.assert_output(outputs[3], 3, b'3', b'a', 2, OutputType.transfer)
         self.assert_output(outputs[4], 4, b'4', b'a', 3, OutputType.transfer)
 
-    def test_compute_asset_addresses_no_input(self):
+    def test_compute_asset_ids_no_input(self):
         # Transaction with no input
         outputs = self.color_outputs(
             inputs=[],
@@ -448,12 +448,12 @@ class ColoringEngineTests(unittest.TestCase):
 
         self.assertIsNone(outputs)
 
-    def test_compute_asset_addresses_no_asset_quantity(self):
+    def test_compute_asset_ids_no_asset_quantity(self):
         # Issue an asset
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
             ],
             asset_quantities=[],
             marker_index=1,
@@ -464,12 +464,12 @@ class ColoringEngineTests(unittest.TestCase):
         self.assert_output(outputs[1], 1, b'1', None, 0, OutputType.marker_output)
         self.assert_output(outputs[2], 2, b'2', None, 0, OutputType.transfer)
 
-    def test_compute_asset_addresses_zero_asset_quantity(self):
+    def test_compute_asset_ids_zero_asset_quantity(self):
         # Issue an asset
         outputs = self.color_outputs(
             inputs=[
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
-                {'asset_address': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'abcdef'},
+                {'asset_id': None, 'asset_quantity': 0, 'output_script': b'ghijkl'}
             ],
             asset_quantities=[0],
             marker_index=1,
@@ -493,7 +493,7 @@ class ColoringEngineTests(unittest.TestCase):
         previous_outputs = [
             openassets.protocol.TransactionOutput(
                 10, bitcoin.core.CScript(item.get('output_script', b'\x01\x02')),
-                item['asset_address'],
+                item['asset_id'],
                 item['asset_quantity'],
                 None)
             for item in inputs]
@@ -502,16 +502,16 @@ class ColoringEngineTests(unittest.TestCase):
         for i in range(0, output_count):
             outputs.append(bitcoin.core.CTxOut(i, bitcoin.core.CScript(bytes(str(i), encoding='UTF-8'))))
 
-        return openassets.protocol.ColoringEngine._compute_asset_addresses(
+        return openassets.protocol.ColoringEngine._compute_asset_ids(
             previous_outputs,
             marker_index,
             outputs,
             asset_quantities)
 
-    def assert_output(self, output, value, script, asset_address, asset_quantity, output_type):
+    def assert_output(self, output, value, script, asset_id, asset_quantity, output_type):
         self.assertEqual(value, output.value)
         self.assertEqual(script, bytes(output.script))
-        self.assertEqual(asset_address, output.asset_address)
+        self.assertEqual(asset_id, output.asset_id)
         self.assertEqual(asset_quantity, output.asset_quantity)
         self.assertEqual(output_type, output.output_type)
 
@@ -664,7 +664,7 @@ class TransactionOutputTests(unittest.TestCase):
 
         self.assertEqual(100, target.value)
         self.assertEqual(b'abcd', bytes(target.script))
-        self.assertEqual(b'efgh', target.asset_address)
+        self.assertEqual(b'efgh', target.asset_id)
         self.assertEqual(2 ** 63 - 1, target.asset_quantity)
         self.assertEqual(OutputType.transfer, target.output_type)
 
@@ -682,7 +682,7 @@ class TransactionOutputTests(unittest.TestCase):
         self.assertEqual('TransactionOutput(' +
             'value=100, ' +
             'script=CScript([OP_NOP, OP_VER, OP_IF, OP_NOTIF]), ' +
-            'asset_address=b\'efgh\', ' +
+            'asset_id=b\'efgh\', ' +
             'asset_quantity=1500, ' +
             'output_type=<OutputType.transfer: 3>)',
             str(target))

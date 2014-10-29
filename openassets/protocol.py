@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 """
-Provides the infrastructure for calculating the asset address and quantity of Bitcoin outputs,
+Provides the infrastructure for calculating the asset ID and asset quantity of Bitcoin outputs,
 according to the Open Assets Protocol.
 """
 
@@ -36,7 +36,7 @@ import io
 
 
 class ColoringEngine(object):
-    """The backtracking engine used to find the asset address and asset quantity of any output."""
+    """The backtracking engine used to find the asset ID and asset quantity of any output."""
 
     def __init__(self, transaction_provider, cache, event_loop):
         """
@@ -53,11 +53,11 @@ class ColoringEngine(object):
     @asyncio.coroutine
     def get_output(self, transaction_hash, output_index):
         """
-        Gets an output and information about its asset address and quantity.
+        Gets an output and information about its asset ID and asset quantity.
 
         :param bytes transaction_hash: The hash of the transaction containing the output.
         :param int output_index: The index of the output.
-        :return: An object containing the output and the asset address and quantity.
+        :return: An object containing the output as well as its asset ID and asset quantity.
         :rtype: Future[TransactionOutput]
         """
         cached_output = yield from self._cache.get(transaction_hash, output_index)
@@ -80,7 +80,7 @@ class ColoringEngine(object):
     @asyncio.coroutine
     def color_transaction(self, transaction):
         """
-        Computes the asset address and quantity of every output in the transaction.
+        Computes the asset ID and asset quantity of every output in the transaction.
 
         :param CTransaction transaction: The transaction to color.
         :return: A list containing all the colored outputs of the transaction.
@@ -103,14 +103,14 @@ class ColoringEngine(object):
                             inputs.append((yield from asyncio.async(
                                 self.get_output(input.prevout.hash, input.prevout.n), loop=self._loop)))
 
-                        asset_addresses = self._compute_asset_addresses(
+                        asset_ids = self._compute_asset_ids(
                             inputs,
                             i,
                             transaction.vout,
                             marker_output.asset_quantities)
 
-                        if asset_addresses is not None:
-                            return asset_addresses
+                        if asset_ids is not None:
+                            return asset_ids
 
         # If no valid marker output was found in the transaction, all outputs are considered uncolored
         return [
@@ -118,15 +118,15 @@ class ColoringEngine(object):
             for output in transaction.vout]
 
     @classmethod
-    def _compute_asset_addresses(cls, inputs, marker_output_index, outputs, asset_quantities):
+    def _compute_asset_ids(cls, inputs, marker_output_index, outputs, asset_quantities):
         """
-        Computes the asset addresses of every output in a transaction.
+        Computes the asset IDs of every output in a transaction.
 
         :param list[TransactionOutput] inputs: The outputs referenced by the inputs of the transaction.
         :param int marker_output_index: The position of the marker output in the transaction.
         :param list[CTxOut] outputs: The outputs of the transaction.
         :param list[int] asset_quantities: The list of asset quantities of the outputs.
-        :return: A list of outputs with asset address and quantity information.
+        :return: A list of outputs with asset ID and quantity information.
         :rtype: list[TransactionOutput]
         """
         # If there are more items in the asset quantities list than outputs in the transaction (excluding the
@@ -141,12 +141,12 @@ class ColoringEngine(object):
         result = []
 
         # Add the issuance outputs
-        issuance_address = cls.hash_script(bytes(inputs[0].script))
+        issuance_asset_id = cls.hash_script(bytes(inputs[0].script))
 
         for i in range(0, marker_output_index):
             value, script = outputs[i].nValue, outputs[i].scriptPubKey
             if i < len(asset_quantities) and asset_quantities[i] > 0:
-                output = TransactionOutput(value, script, issuance_address, asset_quantities[i], OutputType.issuance)
+                output = TransactionOutput(value, script, issuance_asset_id, asset_quantities[i], OutputType.issuance)
             else:
                 output = TransactionOutput(value, script, None, 0, OutputType.issuance)
 
@@ -167,7 +167,7 @@ class ColoringEngine(object):
                 output_asset_quantity = 0
 
             output_units_left = output_asset_quantity
-            asset_address = None
+            asset_id = None
 
             while output_units_left > 0:
 
@@ -181,29 +181,29 @@ class ColoringEngine(object):
                     else:
                         input_units_left = current_input.asset_quantity
 
-                # If the current input is colored, assign its asset address to the current output
-                if current_input.asset_address is not None:
+                # If the current input is colored, assign its asset ID to the current output
+                if current_input.asset_id is not None:
                     progress = min(input_units_left, output_units_left)
                     output_units_left -= progress
                     input_units_left -= progress
 
-                    if asset_address is None:
+                    if asset_id is None:
                         # This is the first input to map to this output
-                        asset_address = current_input.asset_address
-                    elif asset_address != current_input.asset_address:
-                        # Another different asset address has already been assigned to that output:
+                        asset_id = current_input.asset_id
+                    elif asset_id != current_input.asset_id:
+                        # Another different asset ID has already been assigned to that output:
                         # the marker output is considered invalid
                         return None
 
             result.append(TransactionOutput(
-                outputs[i].nValue, outputs[i].scriptPubKey, asset_address, output_asset_quantity, OutputType.transfer))
+                outputs[i].nValue, outputs[i].scriptPubKey, asset_id, output_asset_quantity, OutputType.transfer))
 
         return result
 
     @staticmethod
     def hash_script(data):
         """
-        Hashes a script into a pay-to-script-hash address using SHA256 followed by RIPEMD160.
+        Hashes a script into an asset ID using SHA256 followed by RIPEMD160.
 
         :param bytes data: The data to hash.
         """
@@ -223,13 +223,13 @@ class OutputType(enum.Enum):
 
 
 class TransactionOutput(object):
-    """Represents a transaction output with information about the asset address and asset quantity associated to it."""
+    """Represents a transaction output with information about the asset ID and asset quantity associated to it."""
 
     def __init__(
             self,
             value=-1,
             script=bitcoin.core.script.CScript(),
-            asset_address=None,
+            asset_id=None,
             asset_quantity=0,
             output_type=OutputType.uncolored):
         """
@@ -237,7 +237,7 @@ class TransactionOutput(object):
 
         :param int value: The satoshi value of the output.
         :param CScript script: The script controlling redemption of the output.
-        :param bytes | None asset_address: The asset address of the output.
+        :param bytes | None asset_id: The asset ID of the output.
         :param int asset_quantity: The asset quantity of the output.
         :param OutputType output_type: The type of the output.
         """
@@ -245,7 +245,7 @@ class TransactionOutput(object):
 
         self._value = value
         self._script = script
-        self._asset_address = asset_address
+        self._asset_id = asset_id
         self._asset_quantity = asset_quantity
         self._output_type = output_type
 
@@ -270,14 +270,14 @@ class TransactionOutput(object):
         return self._script
 
     @property
-    def asset_address(self):
+    def asset_id(self):
         """
-        Gets the asset address of the output.
+        Gets the asset ID of the output.
 
-        :return: The asset address of the output, or None of the output is uncolored.
+        :return: The asset ID of the output, or None of the output is uncolored.
         :rtype: bytes | None
         """
-        return self._asset_address
+        return self._asset_id
 
     @property
     def asset_quantity(self):
@@ -300,8 +300,8 @@ class TransactionOutput(object):
         return self._output_type
 
     def __repr__(self):
-        return 'TransactionOutput(value=%r, script=%r, asset_address=%r, asset_quantity=%r, output_type=%r)' % \
-            (self.value, self.script, self.asset_address, self.asset_quantity, self.output_type)
+        return 'TransactionOutput(value=%r, script=%r, asset_id=%r, asset_quantity=%r, output_type=%r)' % \
+            (self.value, self.script, self.asset_id, self.asset_quantity, self.output_type)
 
 
 class OutputCache(object):

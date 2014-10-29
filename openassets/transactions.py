@@ -68,7 +68,7 @@ class TransactionBuilder(object):
         Creates a transaction for sending assets and bitcoins.
 
         :param list[(bytes, TransferParameters)] asset_transfer_specs: A list of tuples. In each tuple:
-            - The first element is the asset address of an asset.
+            - The first element is the ID of an asset.
             - The second element is the parameters of the transfer.
         :param TransferParameters btc_transfer_spec: The parameters of the bitcoins being transferred.
         :param int fees: The fees to include in the transaction.
@@ -78,9 +78,9 @@ class TransactionBuilder(object):
         inputs = []
         outputs = []
         asset_quantities = []
-        for asset_address, transfer_spec in asset_transfer_specs:
+        for asset_id, transfer_spec in asset_transfer_specs:
             colored_outputs, collected_amount = self._collect_colored_outputs(
-                transfer_spec.unspent_outputs, asset_address, transfer_spec.amount)
+                transfer_spec.unspent_outputs, asset_id, transfer_spec.amount)
             inputs.extend(colored_outputs)
             outputs.append(self._get_colored_output(transfer_spec.to_script))
             asset_quantities.append(transfer_spec.amount)
@@ -125,11 +125,11 @@ class TransactionBuilder(object):
         """
         return self.transfer([], transfer_spec, fees)
 
-    def transfer_assets(self, asset_address, transfer_spec, btc_change_script, fees):
+    def transfer_assets(self, asset_id, transfer_spec, btc_change_script, fees):
         """
         Creates a transaction for sending an asset.
 
-        :param bytes asset_address: The address of the asset being sent.
+        :param bytes asset_id: The ID of the asset being sent.
         :param TransferParameters transfer_spec: The parameters of the asset being transferred.
         :param bytes btc_change_script: The script where to send bitcoin change, if any.
         :param int fees: The fees to include in the transaction.
@@ -137,32 +137,32 @@ class TransactionBuilder(object):
         :rtype: CTransaction
         """
         return self.transfer(
-            [(asset_address, transfer_spec)],
+            [(asset_id, transfer_spec)],
             TransferParameters(transfer_spec.unspent_outputs, None, btc_change_script, 0),
             fees)
 
-    def btc_asset_swap(self, btc_transfer_spec, asset_address, asset_transfer_spec, fees):
+    def btc_asset_swap(self, btc_transfer_spec, asset_id, asset_transfer_spec, fees):
         """
         Creates a transaction for swapping assets for bitcoins.
 
         :param TransferParameters btc_transfer_spec: The parameters of the bitcoins being transferred.
-        :param bytes asset_address: The address of the asset being sent.
+        :param bytes asset_id: The ID of the asset being sent.
         :param TransferParameters asset_transfer_spec: The parameters of the asset being transferred.
         :param int fees: The fees to include in the transaction.
         :return: The resulting unsigned transaction.
         :rtype: CTransaction
         """
-        return self.transfer([(asset_address, asset_transfer_spec)], btc_transfer_spec, fees)
+        return self.transfer([(asset_id, asset_transfer_spec)], btc_transfer_spec, fees)
 
     def asset_asset_swap(
-            self, asset1_address, asset1_transfer_spec, asset2_address, asset2_transfer_spec, fees):
+            self, asset1_id, asset1_transfer_spec, asset2_id, asset2_transfer_spec, fees):
         """
         Creates a transaction for swapping an asset for another asset.
 
-        :param bytes asset1_address: The address of the first asset.
+        :param bytes asset1_id: The ID of the first asset.
         :param TransferParameters asset1_transfer_spec: The parameters of the first asset being transferred.
             It is also used for paying fees and/or receiving change if any.
-        :param bytes asset2_address: The address of the second asset.
+        :param bytes asset2_id: The ID of the second asset.
         :param TransferDetails asset2_transfer_spec: The parameters of the second asset being transferred.
         :param int fees: The fees to include in the transaction.
         :return: The resulting unsigned transaction.
@@ -172,7 +172,7 @@ class TransactionBuilder(object):
             asset1_transfer_spec.unspent_outputs, asset1_transfer_spec.to_script, asset1_transfer_spec.change_script, 0)
 
         return self.transfer(
-            [(asset1_address, asset1_transfer_spec), (asset2_address, asset2_transfer_spec)], btc_transfer_spec, fees)
+            [(asset1_id, asset1_transfer_spec), (asset2_id, asset2_transfer_spec)], btc_transfer_spec, fees)
 
     @staticmethod
     def _collect_uncolored_outputs(unspent_outputs, amount):
@@ -187,7 +187,7 @@ class TransactionBuilder(object):
         total_amount = 0
         result = []
         for output in unspent_outputs:
-            if output.output.asset_address is None:
+            if output.output.asset_id is None:
                 result.append(output)
                 total_amount += output.output.value
 
@@ -197,12 +197,12 @@ class TransactionBuilder(object):
         raise InsufficientFundsError
 
     @staticmethod
-    def _collect_colored_outputs(unspent_outputs, asset_address, asset_quantity):
+    def _collect_colored_outputs(unspent_outputs, asset_id, asset_quantity):
         """
         Returns a list of colored outputs for the specified quantity.
 
         :param list[SpendableOutput] unspent_outputs: The list of available outputs.
-        :param bytes asset_address: The address of the asset to collect.
+        :param bytes asset_id: The ID of the asset to collect.
         :param int asset_quantity: The asset quantity to collect.
         :return: A list of outputs, and the total asset quantity collected.
         :rtype: (list[SpendableOutput], int)
@@ -210,7 +210,7 @@ class TransactionBuilder(object):
         total_amount = 0
         result = []
         for output in unspent_outputs:
-            if output.output.asset_address == asset_address:
+            if output.output.asset_id == asset_id:
                 result.append(output)
                 total_amount += output.output.asset_quantity
 
@@ -258,7 +258,7 @@ class TransactionBuilder(object):
 
 
 class SpendableOutput(object):
-    """Represents a transaction output with information about the asset address and asset quantity associated to it."""
+    """Represents a transaction output with information about the asset ID and asset quantity associated to it."""
 
     def __init__(self, out_point, output):
         """
