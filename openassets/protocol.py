@@ -126,7 +126,7 @@ class ColoringEngine(object):
         :param int marker_output_index: The position of the marker output in the transaction.
         :param list[CTxOut] outputs: The outputs of the transaction.
         :param list[int] asset_quantities: The list of asset quantities of the outputs.
-        :return: A list of outputs with asset ID and quantity information.
+        :return: A list of outputs with asset ID and asset quantity information.
         :rtype: list[TransactionOutput]
         """
         # If there are more items in the asset quantities list than outputs in the transaction (excluding the
@@ -223,7 +223,7 @@ class OutputType(enum.Enum):
 
 
 class TransactionOutput(object):
-    """Represents a transaction output with information about the asset ID and asset quantity associated to it."""
+    """Represents a transaction output and its asset ID and asset quantity."""
 
     def __init__(
             self,
@@ -385,7 +385,7 @@ class MarkerOutput(object):
                 return None
 
             try:
-                # A var-integer representing the number of items in the  asset quantity list  field
+                # Deserialize the expected number of items in the asset quantity list
                 output_count = bitcoin.core.VarIntSerializer.stream_deserialize(stream)
 
                 # LEB128-encoded unsigned integers representing the asset quantity of every output in order
