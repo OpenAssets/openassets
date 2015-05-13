@@ -191,7 +191,7 @@ class TransactionBuilder(object):
                 total_amount += output.output.value
 
             # Make sure we don't create dust outputs
-            if total_amount == amount or total_amount >= amount and (total_amount - amount) >= self._dust_amount:
+            if total_amount == amount or (total_amount >= amount and (total_amount - amount) >= self._dust_amount):
                 return result, total_amount
 
         if total_amount >= amount and (total_amount - amount) < self._dust_amount:
