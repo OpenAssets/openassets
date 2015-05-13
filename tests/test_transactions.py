@@ -153,6 +153,17 @@ class TransactionBuilderTests(unittest.TestCase):
             openassets.transactions.DustOutputError,
             self.target.transfer_bitcoin, spec, 10)
 
+    def test_transfer_bitcoin_dust_output_more_inputs(self):
+        outputs = self.generate_outputs([
+            (10, b'source', None, 0),
+            (11, b'source', None, 0),
+            (10, b'source', None, 0)
+        ])
+
+        spec = openassets.transactions.TransferParameters(outputs, b'target', b'change', 10)
+        result = self.target.transfer_bitcoin(spec, 10)
+        self.assertEqual(3, len(result.vin))
+
     def test_transfer_assets_with_change(self):
         outputs = self.generate_outputs([
             (10, b'source', b'a1', 50),
