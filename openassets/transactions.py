@@ -174,8 +174,7 @@ class TransactionBuilder(object):
         return self.transfer(
             [(asset1_id, asset1_transfer_spec), (asset2_id, asset2_transfer_spec)], btc_transfer_spec, fees)
 
-    @staticmethod
-    def _collect_uncolored_outputs(unspent_outputs, amount):
+    def _collect_uncolored_outputs(self, unspent_outputs, amount):
         """
         Returns a list of uncolored outputs for the specified amount.
 
@@ -191,10 +190,14 @@ class TransactionBuilder(object):
                 result.append(output)
                 total_amount += output.output.value
 
-            if total_amount >= amount:
+            # Make sure we don't create dust outputs
+            if total_amount == amount or total_amount >= amount and (total_amount - amount) >= self._dust_amount:
                 return result, total_amount
 
-        raise InsufficientFundsError
+        if total_amount >= amount and (total_amount - amount) < self._dust_amount:
+            raise DustOutputError
+        else:
+            raise InsufficientFundsError
 
     @staticmethod
     def _collect_colored_outputs(unspent_outputs, asset_id, asset_quantity):
