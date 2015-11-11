@@ -134,6 +134,11 @@ This example requires a Bitcoin Core instance running with RPC enabled and the `
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
+Note
+========
+
+The provided `openassets.protocol.OutputCache()` does not actually implement any caching, it just implements the cache interface. When using this project with the real blockchain, you will likely need to implement your own cache to use this project at scale. 
+
 License
 =======
 
