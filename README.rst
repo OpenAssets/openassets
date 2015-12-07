@@ -39,7 +39,7 @@ Windows
 Unittests
 ========
 
-To run unit tests
+To run unit tests::
 
     $ python -m unittest
 
