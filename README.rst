@@ -36,6 +36,13 @@ Windows
 
     pip install openassets
 
+Unittests
+========
+
+To run unit tests
+
+    $ python -m unittest
+
 Overview
 ========
 
